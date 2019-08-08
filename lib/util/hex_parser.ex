@@ -1,42 +1,31 @@
 defmodule Util.HexParser do
-  def convert_file() do
-    # Default to 2 files
-    convert_file("C:/code/sneex/roms/FF_II.sfc", "C:/code/sneex/roms/FF_II_dump.txt")
-  end
+  @block_size 16
 
   def convert_file(input_file, output_file) do
-    input_file
-    |> File.open!([:read, :binary], &input_handler/1)
-    |> write_output(output_file)
+    output_file
+    |> File.open!([:write], handle_file(input_file))
   end
 
-  defp write_output(contents, output_file) do
-    File.write!(output_file, contents)
-  end
-
-  defp input_handler(input_pid) do
-    input_pid
-    |> read_file([])
-    |> Enum.reduce("", &format_result/2)
-  end
-
-  defp read_file(input_pid, result_list) do
-    case read_block(input_pid) do
-      :eof ->
-        result_list
-      block ->
-        index = Enum.count(result_list) * 16
-        read_file(input_pid, [{index, block} | result_list])
+  defp handle_file(input_file) do
+    fn output_pid ->
+      input_file
+      |> File.open!([:read, :binary], &(read_file(&1, output_pid, 0)))
     end
   end
 
-  # Block is 16 bytes - this is representative of 1 line of text in the output
-  defp read_block(input_pid) do
-    IO.binread(input_pid, 16)
+  defp read_file(input_pid, output_pid, block_number) do
+    case IO.binread(input_pid, @block_size) do
+      :eof ->
+        :ok
+      block ->
+        formatted_block = block_number * @block_size |> format_result(block)
+        IO.write(output_pid, formatted_block)
+        read_file(input_pid, output_pid, block_number + 1)
+    end
   end
 
-  defp format_result({index, block}, result) do
-    "#{format_index(index)}: #{format_block(block)}\r\n#{result}"
+  defp format_result(index, block) do
+    [[format_index(index), ": "], format_block(block), ["\r\n"]]
   end
 
   defp format_block(<<
@@ -48,17 +37,23 @@ defmodule Util.HexParser do
     fhex = &(format_byte(&1, 16, 2))
     fbin = &(format_printable_byte(&1))
 
-    hex1 = "#{fhex.(b0)} #{fhex.(b1)} #{fhex.(b2)} #{fhex.(b3)}"
-    hex2 = "#{fhex.(b4)} #{fhex.(b5)} #{fhex.(b6)} #{fhex.(b7)}"
-    hex3 = "#{fhex.(b8)} #{fhex.(b9)} #{fhex.(bA)} #{fhex.(bB)}"
-    hex4 = "#{fhex.(bC)} #{fhex.(bD)} #{fhex.(bE)} #{fhex.(bF)}"
+    hex = [
+      fhex.(b0), " ", fhex.(b1), " ", fhex.(b2), " ", fhex.(b3), " ",
+      fhex.(b4), " ", fhex.(b5), " ", fhex.(b6), " ", fhex.(b7), " ",
+      fhex.(b8), " ", fhex.(b9), " ", fhex.(bA), " ", fhex.(bB), " ",
+      fhex.(bC), " ", fhex.(bD), " ", fhex.(bE), " ", fhex.(bF)
+    ]
 
-    bin1 = "#{fbin.(b0)}#{fbin.(b1)}#{fbin.(b2)}#{fbin.(b3)}"
-    bin2 = "#{fbin.(b4)}#{fbin.(b5)}#{fbin.(b6)}#{fbin.(b7)}"
-    bin3 = "#{fbin.(b8)}#{fbin.(b9)}#{fbin.(bA)}#{fbin.(bB)}"
-    bin4 = "#{fbin.(bC)}#{fbin.(bD)}#{fbin.(bE)}#{fbin.(bF)}"
+    ascii = [
+      "|",
+      fbin.(b0), fbin.(b1), fbin.(b2), fbin.(b3),
+      fbin.(b4), fbin.(b5), fbin.(b6), fbin.(b7),
+      fbin.(b8), fbin.(b9), fbin.(bA), fbin.(bB),
+      fbin.(bC), fbin.(bD), fbin.(bE), fbin.(bF),
+      "|"
+    ]
 
-    "#{hex1} #{hex2}  #{hex3} #{hex4}  |#{bin1}#{bin2}#{bin3}#{bin4}|"
+    [hex, ["  "], ascii]
   end
 
   defp format_byte(byte, base, length) do
