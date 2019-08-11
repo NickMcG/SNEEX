@@ -22,14 +22,14 @@ defmodule Util.Page do
     {%Util.Page{data: page}, rest}
   end
 
-  @spec get_byte(Util.Page.t(), char()) :: <<_::8>>
+  @spec get_byte(Util.Page.t(), char()) :: byte()
 
-  def get_byte(%Util.Page{data: <<byte::binary-size(1), _rest::binary>>}, 0), do: byte
+  def get_byte(%Util.Page{data: <<byte::size(8), _rest::binary>>}, 0), do: byte
 
   def get_byte(%Util.Page{data: data}, address)
       when is_integer(address) and address > 0 and address < @page_size do
     bytes_before = address - 1
-    <<_before::binary-size(bytes_before), byte::binary-size(1), _rest::binary>> = data
+    <<_before::binary-size(bytes_before), byte::size(8), _rest::binary>> = data
     byte
   end
 
