@@ -27,3 +27,7 @@ sneex-*.tar
 
 # Ignore any test ROMS that are placed in the repo - we don't want to distribute any ROMs
 /roms/
+
+# Dialyzer
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
