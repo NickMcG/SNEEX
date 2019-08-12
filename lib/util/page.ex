@@ -28,8 +28,7 @@ defmodule Util.Page do
 
   def get_byte(%Util.Page{data: data}, address)
       when is_integer(address) and address > 0 and address < @page_size do
-    bytes_before = address - 1
-    <<_before::binary-size(bytes_before), byte::size(8), _rest::binary>> = data
+    <<_before::binary-size(address), byte::size(8), _rest::binary>> = data
     byte
   end
 
@@ -39,8 +38,7 @@ defmodule Util.Page do
 
   def get_block(%Util.Page{data: data}, address)
       when is_integer(address) and address > 0 and address < @page_size do
-    bytes_before = address - 1
-    <<_before::binary-size(bytes_before), block::binary>> = data
+    <<_before::binary-size(address), block::binary>> = data
     block
   end
 
@@ -55,9 +53,13 @@ defmodule Util.Page do
 
   def get_block(%Util.Page{data: data}, address, size)
       when is_integer(address) and is_integer(size) and address >= 0 and size > 0 and
-             address + size < @page_size do
-    bytes_before = address - 1
-    <<_before::binary-size(bytes_before), block::binary-size(size), _rest::binary>> = data
+             address + size <= @page_size do
+    <<_before::binary-size(address), block::binary-size(size), _rest::binary>> = data
     block
+  end
+
+  @spec page_size :: 4096
+  def page_size do
+    @page_size
   end
 end

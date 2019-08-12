@@ -43,7 +43,8 @@ defmodule Util.Bank do
 
   def extract_header(%Util.Bank{pages: %{0x7 => page7, 0xF => pageF}}) do
     [page7, pageF]
-    |> Enum.find(&try_extract_header/1)
+    |> Enum.map(&try_extract_header/1)
+    |> Enum.find(&(&1 != nil))
   end
 
   defp try_extract_header(page) do

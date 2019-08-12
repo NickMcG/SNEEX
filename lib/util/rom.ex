@@ -11,17 +11,18 @@ defmodule Util.Rom do
 
   @opaque t :: %Util.Rom{banks: %{integer() => Util.Bank.t()}, header: Util.Header.t() | nil}
 
-  @spec parse(Path.t()) :: Util.Rom.t()
-  def parse(path) do
-    banks = File.open!(path, [:read, :binary], &load_bank(&1, %{}, 0))
-
-    %{0x00 => first_bank} = banks
-
+  @spec new(%{integer() => Util.Bank.t()}) :: Util.Rom.t()
+  def new(%{0x00 => first_bank} = banks) do
     %Util.Rom{banks: banks, header: Util.Bank.extract_header(first_bank)}
   end
 
-  @spec load_bank(atom() | pid(), %{}, integer()) :: %{}
-  def load_bank(file_pid, banks, bank_id) do
+  @spec parse(Path.t()) :: Util.Rom.t()
+  def parse(path) do
+    banks = File.open!(path, [:read, :binary], &load_bank(&1, %{}, 0))
+    new(banks)
+  end
+
+  defp load_bank(file_pid, banks, bank_id) do
     case read_bank(file_pid) do
       {:ok, new_bank} ->
         banks = Map.put(banks, bank_id, new_bank)
