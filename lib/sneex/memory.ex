@@ -15,30 +15,61 @@ defmodule Sneex.Memory do
     %__MODULE__{data: data}
   end
 
-  @spec load_byte(__MODULE__.t(), Sneex.BasicTypes.address()) :: byte()
-  def load_byte(%__MODULE__{data: data}, address) do
-    load_data(data, address, 1)
+  @spec raw_data(__MODULE__.t()) :: binary()
+  def raw_data(%__MODULE__{data: data}) do
+    data
   end
 
-  @spec load_word(__MODULE__.t(), Sneex.BasicTypes.address()) :: Sneex.BasicTypes.word()
-  def load_word(%__MODULE__{data: data}, address) do
-    load_data(data, address, 2)
+  @spec read_byte(__MODULE__.t(), Sneex.BasicTypes.address()) :: byte()
+  def read_byte(%__MODULE__{data: data}, address) do
+    {_, result, _} = split_data(data, address, 1)
+    result
   end
 
-  @spec load_long(__MODULE__.t(), Sneex.BasicTypes.address()) :: Sneex.BasicTypes.long()
-  def load_long(%__MODULE__{data: data}, address) do
-    load_data(data, address, 3)
+  @spec write_byte(__MODULE__.t(), Sneex.BasicTypes.address(), byte()) :: __MODULE__.t()
+  def write_byte(%__MODULE__{data: data}, address, byte) do
+    {pre, _, post} = split_data(data, address, 1)
+    new_data = pre <> <<byte>> <> post
+    %__MODULE__{data: new_data}
   end
 
-  defp load_data(memory, 0, length) when is_binary(memory) and length < byte_size(memory) do
-    <<data::binary-size(length), _rest::binary>> = memory
-    data |> format_data
+  @spec read_word(__MODULE__.t(), Sneex.BasicTypes.address()) :: Sneex.BasicTypes.word()
+  def read_word(%__MODULE__{data: data}, address) do
+    {_, result, _} = split_data(data, address, 2)
+    result
   end
 
-  defp load_data(memory, address, length)
+  @spec write_word(__MODULE__.t(), Sneex.BasicTypes.address(), Sneex.BasicTypes.word()) ::
+          __MODULE__.t()
+  def write_word(%__MODULE__{data: data}, address, word) do
+    {pre, _, post} = split_data(data, address, 2)
+    new_data = pre <> unformat_data(word, 2) <> post
+    %__MODULE__{data: new_data}
+  end
+
+  @spec read_long(__MODULE__.t(), Sneex.BasicTypes.address()) :: Sneex.BasicTypes.long()
+  def read_long(%__MODULE__{data: data}, address) do
+    {_, result, _} = split_data(data, address, 3)
+    result
+  end
+
+  @spec write_long(__MODULE__.t(), Sneex.BasicTypes.address(), Sneex.BasicTypes.long()) ::
+          __MODULE__.t()
+  def write_long(%__MODULE__{data: data}, address, long) do
+    {pre, _, post} = split_data(data, address, 3)
+    new_data = pre <> unformat_data(long, 3) <> post
+    %__MODULE__{data: new_data}
+  end
+
+  defp split_data(memory, 0, length) when is_binary(memory) and length <= byte_size(memory) do
+    <<data::binary-size(length), rest::binary>> = memory
+    {<<>>, format_data(data), rest}
+  end
+
+  defp split_data(memory, address, length)
        when is_binary(memory) and address + length <= byte_size(memory) do
-    <<_before::binary-size(address), data::binary-size(length), _rest::binary>> = memory
-    data |> format_data
+    <<before::binary-size(address), data::binary-size(length), rest::binary>> = memory
+    {before, format_data(data), rest}
   end
 
   defp format_data(<<b::size(8)>>), do: b
@@ -49,5 +80,18 @@ defmodule Sneex.Memory do
 
   defp format_data(<<b0::size(8), b1::size(8), b2::size(8)>>) do
     b2 <<< 16 ||| b1 <<< 8 ||| b0
+  end
+
+  defp unformat_data(data, 2) do
+    hi = data |> band(0xFF00) |> bsr(8)
+    lo = data &&& 0x00FF
+    <<lo, hi>>
+  end
+
+  defp unformat_data(data, 3) do
+    hi = data |> band(0xFF0000) |> bsr(16)
+    med = data |> band(0x00FF00) |> bsr(8)
+    lo = data &&& 0x0000FF
+    <<lo, med, hi>>
   end
 end

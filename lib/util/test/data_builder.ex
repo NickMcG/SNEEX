@@ -4,24 +4,29 @@ defmodule Util.Test.DataBuilder do
 
   This is not really intended for main consumption
   """
+
+  def build_block_of_00s(length) do
+    append_data_to_block(<<>>, length, 0x00)
+  end
+
   def build_block_of_ffs(length) do
-    append_ffs_to_block(<<>>, length)
+    append_data_to_block(<<>>, length, 0xFF)
   end
 
-  defp append_ffs_to_block(data, 0) do
-    data
+  defp append_data_to_block(block, 0, _data) do
+    block
   end
 
-  defp append_ffs_to_block(data, count) when count >= 16 do
+  defp append_data_to_block(block, count, data) when count >= 16 do
     ffs =
-      <<0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-        0xFF>>
+      <<data, data, data, data, data, data, data, data, data, data, data, data, data, data, data,
+        data>>
 
-    append_ffs_to_block(data <> ffs, count - 16)
+    append_data_to_block(block <> ffs, count - 16, data)
   end
 
-  defp append_ffs_to_block(data, count) do
-    append_ffs_to_block(data <> <<0xFF>>, count - 1)
+  defp append_data_to_block(block, count, data) do
+    append_data_to_block(block <> <<data>>, count - 1, data)
   end
 
   def build_final_fantasy_2_header do

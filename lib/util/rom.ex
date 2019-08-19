@@ -12,7 +12,7 @@ defmodule Util.Rom do
   @opaque t :: %Util.Rom{banks: %{integer() => Util.Bank.t()}, header: Util.Header.t() | nil}
 
   @spec new(%{integer() => Util.Bank.t()}) :: Util.Rom.t()
-  def new(%{0x00 => first_bank} = banks) do
+  def new(banks = %{0x00 => first_bank}) do
     %Util.Rom{banks: banks, header: Util.Bank.extract_header(first_bank)}
   end
 
