@@ -499,7 +499,7 @@ defmodule Sneex.Ops.IncrementTest do
   end
 
   defp get_memory_block(cpu, skip, block_size) do
-    <<_before::binary-size(16), actual::binary-size(block_size), _rest::binary>> =
+    <<_before::binary-size(skip), actual::binary-size(block_size), _rest::binary>> =
       cpu |> Cpu.memory() |> Memory.raw_data()
 
     actual

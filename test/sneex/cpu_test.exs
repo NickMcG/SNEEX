@@ -37,14 +37,14 @@ defmodule Sneex.CpuTest do
     end
   end
 
-  describe "write_absolute_address/3" do
+  describe "write_data/3" do
     test "16-bit", %{cpu: cpu} do
       cpu = Sneex.Cpu.acc_size(cpu, :bit16)
 
       data =
         cpu
-        |> Sneex.Cpu.write_absolute_address(1, 0xDEAD)
-        |> Sneex.Cpu.write_absolute_address(4, 0xBEEF)
+        |> Sneex.Cpu.write_data(1, 0xDEAD)
+        |> Sneex.Cpu.write_data(4, 0xBEEF)
         |> Sneex.Cpu.memory()
         |> Sneex.Memory.raw_data()
 
@@ -56,11 +56,11 @@ defmodule Sneex.CpuTest do
 
       data =
         cpu
-        |> Sneex.Cpu.write_absolute_address(0, 0xDE)
-        |> Sneex.Cpu.write_absolute_address(1, 0xAD)
-        |> Sneex.Cpu.write_absolute_address(2, 0xBE)
-        |> Sneex.Cpu.write_absolute_address(3, 0xEF)
-        |> Sneex.Cpu.write_absolute_address(4, 0xBEEF)
+        |> Sneex.Cpu.write_data(0, 0xDE)
+        |> Sneex.Cpu.write_data(1, 0xAD)
+        |> Sneex.Cpu.write_data(2, 0xBE)
+        |> Sneex.Cpu.write_data(3, 0xEF)
+        |> Sneex.Cpu.write_data(4, 0xBEEF)
         |> Sneex.Cpu.memory()
         |> Sneex.Memory.raw_data()
 

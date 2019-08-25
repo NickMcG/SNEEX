@@ -2,6 +2,22 @@ defmodule Sneex.Cpu do
   @moduledoc """
   This module defines a structure that represents the CPU's current state, and defines functions for
   interacting with that state (getting it, updating it, etc.).
+
+  Design thoughts:
+  - CPU should have 2 functions:
+      - tick: this will act as a clock tick
+      - step: this will immediately execute the current command (regardless of remaining ticks)
+  - Have a module that will load the next command
+  - Have a module/struct that represents current command
+
+  23                    15                       7                         0
+                        Accumulator (B)      (A) or (C)      Accumulator (A)
+  Data Bank Register
+                        X Index                  Register X
+                        Y Index                  Register Y
+    0 0 0 0 0 0 0 0     Direct                   Page Register (D)
+    0 0 0 0 0 0 0 0     Stack                    Pointer (S)
+  Program Bank Register Program                  Counter (PC)
   """
   defstruct [
     :acc,
@@ -46,8 +62,8 @@ defmodule Sneex.Cpu do
           decimal_mode: boolean(),
           memory: Sneex.Memory.t()
         }
-  @type word :: Sneex.BasicTypes.word()
-  @type long :: Sneex.BasicTypes.long()
+  @typep word :: Sneex.BasicTypes.word()
+  @typep long :: Sneex.BasicTypes.long()
   @type emulation_mode :: :native | :emulation
   @type bit_size :: :bit8 | :bit16
 
@@ -366,9 +382,11 @@ defmodule Sneex.Cpu do
   @spec carry_flag(__MODULE__.t(), boolean()) :: __MODULE__.t()
   def carry_flag(cpu = %__MODULE__{}, c), do: %__MODULE__{cpu | carry_flag: c}
 
+  @doc "Get the Sneex.Memory that is held by the CPU."
   @spec memory(__MODULE__.t()) :: Sneex.Memory.t()
   def memory(%__MODULE__{memory: m}), do: m
 
+  @doc "Read the 1, 2, or 3 byte operand that is 1 address past the program counter."
   @spec read_operand(__MODULE__.t(), 1 | 2 | 3) :: byte() | word() | long()
   def read_operand(cpu = %__MODULE__{memory: m}, 1) do
     eff_pc = cpu |> effective_pc()
@@ -385,158 +403,42 @@ defmodule Sneex.Cpu do
     Sneex.Memory.read_long(m, eff_pc + 1)
   end
 
-  defp calc_absolute_address(%__MODULE__{data_bank: dbr}, address) do
-    dbr |> bsl(16) |> bor(address)
+  @doc "
+  Reads data from the memory. The address is the memory location where the read starts.
+  The amount of data read (1 or 2 bytes) is based off of the accumulator size.
+
+  ## Examples
+
+  iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit8) |> Sneex.Cpu.read_data(0x000000)
+  0x01
+
+  iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit8) |> Sneex.Cpu.read_data(0x000001)
+  0x02
+
+  iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.read_data(0x000000)
+  0x0201
+  "
+  @spec read_data(__MODULE__.t(), long()) :: byte() | word()
+  def read_data(%__MODULE__{memory: m, acc_size: :bit8}, address) do
+    Sneex.Memory.read_byte(m, address)
   end
 
-  @spec read_absolute_address(__MODULE__.t(), word()) :: byte() | word()
-  def read_absolute_address(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address) do
-    full_addr = calc_absolute_address(cpu, address)
-    Sneex.Memory.read_byte(m, full_addr)
+  def read_data(%__MODULE__{memory: m, acc_size: :bit16}, address) do
+    Sneex.Memory.read_word(m, address)
   end
 
-  def read_absolute_address(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address) do
-    full_addr = calc_absolute_address(cpu, address)
-    Sneex.Memory.read_word(m, full_addr)
-  end
-
-  @spec write_absolute_address(__MODULE__.t(), word(), byte() | word()) :: __MODULE__.t()
-  def write_absolute_address(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address, value) do
-    full_addr = calc_absolute_address(cpu, address)
-    new_memory = Sneex.Memory.write_byte(m, full_addr, value)
+  @doc "
+  Writes data to the memory. The address is the memory location where the write starts.
+  The amount of data written (1 or 2 bytes) is based off of the accumulator size.
+  "
+  @spec write_data(__MODULE__.t(), long(), byte() | word()) :: __MODULE__.t()
+  def write_data(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address, value) do
+    new_memory = Sneex.Memory.write_byte(m, address, value)
     %__MODULE__{cpu | memory: new_memory}
   end
 
-  def write_absolute_address(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address, value) do
-    full_addr = calc_absolute_address(cpu, address)
-    new_memory = Sneex.Memory.write_word(m, full_addr, value)
+  def write_data(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address, value) do
+    new_memory = Sneex.Memory.write_word(m, address, value)
     %__MODULE__{cpu | memory: new_memory}
   end
-
-  defp calc_direct_page_address(%__MODULE__{direct_page: dpr}, address) do
-    (dpr + address) |> band(0x00FFFF)
-  end
-
-  # Need to test
-  def read_direct_page(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address) do
-    eff_addr = calc_direct_page_address(cpu, address)
-    Sneex.Memory.read_byte(m, eff_addr)
-  end
-
-  # Need to test
-  def read_direct_page(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address) do
-    eff_addr = calc_direct_page_address(cpu, address)
-    Sneex.Memory.read_word(m, eff_addr)
-  end
-
-  # Need to test
-  def write_direct_page(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address, value) do
-    eff_addr = calc_direct_page_address(cpu, address)
-    new_memory = Sneex.Memory.write_byte(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  # Need to test
-  def write_direct_page(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address, value) do
-    eff_addr = calc_direct_page_address(cpu, address)
-    new_memory = Sneex.Memory.write_word(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  defp calc_absolute_indexed_x_address(cpu = %__MODULE__{x: x}, address) do
-    calc_absolute_address(cpu, address) + x
-  end
-
-  # Need to test
-  def read_absolute_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address) do
-    eff_addr = calc_absolute_indexed_x_address(cpu, address)
-    Sneex.Memory.read_byte(m, eff_addr)
-  end
-
-  # Need to test
-  def read_absolute_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address) do
-    eff_addr = calc_absolute_indexed_x_address(cpu, address)
-    Sneex.Memory.read_word(m, eff_addr)
-  end
-
-  # Need to test
-  def write_absolute_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address, value) do
-    eff_addr = calc_absolute_indexed_x_address(cpu, address)
-    new_memory = Sneex.Memory.write_byte(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  # Need to test
-  def write_absolute_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address, value) do
-    eff_addr = calc_absolute_indexed_x_address(cpu, address)
-    new_memory = Sneex.Memory.write_word(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  # direct page x-indexed addressing mode
-
-  defp calc_direct_page_indexed_x_address(cpu = %__MODULE__{direct_page: dpr}, address) do
-    x = x(cpu)
-    (dpr + x + address) |> band(0x00FFFF)
-  end
-
-  # Need to test
-  def read_direct_page_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address) do
-    eff_addr = calc_direct_page_indexed_x_address(cpu, address)
-    Sneex.Memory.read_byte(m, eff_addr)
-  end
-
-  # Need to test
-  def read_direct_page_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address) do
-    eff_addr = calc_direct_page_indexed_x_address(cpu, address)
-    Sneex.Memory.read_word(m, eff_addr)
-  end
-
-  # Need to test
-  def write_direct_page_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit8}, address, value) do
-    eff_addr = calc_direct_page_indexed_x_address(cpu, address)
-    new_memory = Sneex.Memory.write_byte(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  # Need to test
-  def write_direct_page_indexed_x(cpu = %__MODULE__{memory: m, acc_size: :bit16}, address, value) do
-    eff_addr = calc_direct_page_indexed_x_address(cpu, address)
-    new_memory = Sneex.Memory.write_word(m, eff_addr, value)
-    %__MODULE__{cpu | memory: new_memory}
-  end
-
-  # :acc,
-  # :acc_size,
-  # :x,
-  # :y,
-  # :index_size,
-  # :data_bank,
-  # :direct_page,
-  # :program_bank,
-  # :stack_ptr,
-  # :pc,
-  # :memory
-
-  # Next steps for CPU (near-term):
-  # - Add helper methods for calculating addresses based off of addressing mode
-  #      - Actually, maybe that should be separated out as an addressing module
-  # - Update increment & increment tests to use CPU
-  # - Refactor to be opaque type and simpler names (with comments to explain the fields)
-
-  # Design thoughts:
-  # - CPU should have 2 functions:
-  #     - tick: this will act as a clock tick
-  #     - step: this will immediately execute the current command (regardless of remaining ticks)
-  # - Have a module that will load the next command
-  # - Have a module/struct that represents current command
 end
-
-# 23                    15                       7                         0
-#                       Accumulator (B)      (A) or (C)      Accumulator (A)
-# Data Bank Register
-#                       X Index                  Register X
-#                       Y Index                  Register Y
-#   0 0 0 0 0 0 0 0     Direct                   Page Register (D)
-#   0 0 0 0 0 0 0 0     Stack                    Pointer (S)
-# Program Bank Register Program                  Counter (PC)

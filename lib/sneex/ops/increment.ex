@@ -4,8 +4,7 @@ defmodule Sneex.Ops.Increment do
   """
   defstruct [:opcode]
 
-  use Bitwise
-  alias Sneex.{BasicTypes, Cpu, Memory}
+  alias Sneex.{AddressMode, BasicTypes, Cpu, Memory}
 
   @opaque t :: %__MODULE__{opcode: 0x1A | 0xEE | 0xE6 | 0xFE | 0xF6}
 
@@ -62,34 +61,29 @@ defmodule Sneex.Ops.Increment do
     end
 
     def execute(%{opcode: 0xEE}, cpu) do
-      read_fn = &Cpu.read_absolute_address/2
-      write_fn = &Cpu.write_absolute_address/3
-      increment(2, read_fn, write_fn, cpu)
+      operand = Cpu.read_operand(cpu, 2)
+      cpu |> AddressMode.absolute(operand) |> increment_from_address(cpu)
     end
 
     def execute(%{opcode: 0xE6}, cpu) do
-      read_fn = &Cpu.read_direct_page/2
-      write_fn = &Cpu.write_direct_page/3
-      increment(1, read_fn, write_fn, cpu)
+      operand = Cpu.read_operand(cpu, 1)
+      cpu |> AddressMode.direct_page(operand) |> increment_from_address(cpu)
     end
 
     def execute(%{opcode: 0xFE}, cpu) do
-      read_fn = &Cpu.read_absolute_indexed_x/2
-      write_fn = &Cpu.write_absolute_indexed_x/3
-      increment(2, read_fn, write_fn, cpu)
+      operand = Cpu.read_operand(cpu, 2)
+      cpu |> AddressMode.absolute_indexed_x(operand) |> increment_from_address(cpu)
     end
 
     def execute(%{opcode: 0xF6}, cpu) do
-      read_fn = &Cpu.read_direct_page_indexed_x/2
-      write_fn = &Cpu.write_direct_page_indexed_x/3
-      increment(1, read_fn, write_fn, cpu)
+      operand = Cpu.read_operand(cpu, 1)
+      cpu |> AddressMode.direct_page_indexed_x(operand) |> increment_from_address(cpu)
     end
 
-    defp increment(operand_bytes, read_fn, write_fn, cpu = %Cpu{}) do
-      operand = Cpu.read_operand(cpu, operand_bytes)
-      data = read_fn.(cpu, operand)
+    defp increment_from_address(address, cpu = %Cpu{}) do
+      data = Cpu.read_data(cpu, address)
       {new_value, cpu} = increment(data, cpu)
-      write_fn.(cpu, operand, new_value)
+      Cpu.write_data(cpu, address, new_value)
     end
 
     defp increment(value, cpu = %Cpu{}) do
