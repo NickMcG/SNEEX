@@ -488,6 +488,142 @@ defmodule Sneex.Ops.IncrementTest do
     end
   end
 
+  describe "increment x" do
+    setup do
+      memory = Memory.new(<<>>)
+      cpu = memory |> Cpu.new()
+      opcode = Increment.new(0xE8)
+
+      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+    end
+
+    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode)
+      assert 2 == Opcode.total_cycles(opcode, cpu)
+      assert "INX" == Opcode.disasm(opcode, memory, 0x0018)
+    end
+
+    test "execute/3, 8-bit", %{cpu: cpu, opcode: opcode} do
+      # 0x00 -> 0x01
+      cpu = cpu |> Cpu.index_size(:bit8) |> Cpu.x(0x0000) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0001 == Cpu.x(cpu)
+
+      # 0x01 -> 0x02
+      cpu = cpu |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0002 == Cpu.x(cpu)
+
+      # 0x7F -> 0x80
+      cpu = cpu |> Cpu.x(0x007F) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert true == Cpu.negative_flag(cpu)
+      assert 0x0080 == Cpu.x(cpu)
+
+      # 0xFF -> 0x00
+      cpu = cpu |> Cpu.x(0x00FF) |> execute_opcode(opcode)
+      assert true == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0000 == Cpu.x(cpu)
+    end
+
+    test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
+      # 0x0000 -> 0x0001
+      cpu = cpu |> Cpu.index_size(:bit16) |> Cpu.x(0x0000) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0001 == Cpu.x(cpu)
+
+      # 0x0001 -> 0x0002
+      cpu = cpu |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0002 == Cpu.x(cpu)
+
+      # 0x7FFF -> 0x8000
+      cpu = cpu |> Cpu.x(0x7FFF) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert true == Cpu.negative_flag(cpu)
+      assert 0x8000 == Cpu.x(cpu)
+
+      # 0xFFFF -> 0x0000
+      cpu = cpu |> Cpu.x(0xFFFF) |> execute_opcode(opcode)
+      assert true == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0000 == Cpu.x(cpu)
+    end
+  end
+
+  describe "increment y" do
+    setup do
+      memory = Memory.new(<<>>)
+      cpu = memory |> Cpu.new()
+      opcode = Increment.new(0xC8)
+
+      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+    end
+
+    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode)
+      assert 2 == Opcode.total_cycles(opcode, cpu)
+      assert "INY" == Opcode.disasm(opcode, memory, 0x0018)
+    end
+
+    test "execute/3, 8-bit", %{cpu: cpu, opcode: opcode} do
+      # 0x00 -> 0x01
+      cpu = cpu |> Cpu.index_size(:bit8) |> Cpu.y(0x0000) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0001 == Cpu.y(cpu)
+
+      # 0x01 -> 0x02
+      cpu = cpu |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0002 == Cpu.y(cpu)
+
+      # 0x7F -> 0x80
+      cpu = cpu |> Cpu.y(0x007F) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert true == Cpu.negative_flag(cpu)
+      assert 0x0080 == Cpu.y(cpu)
+
+      # 0xFF -> 0x00
+      cpu = cpu |> Cpu.y(0x00FF) |> execute_opcode(opcode)
+      assert true == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0000 == Cpu.y(cpu)
+    end
+
+    test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
+      # 0x0000 -> 0x0001
+      cpu = cpu |> Cpu.index_size(:bit16) |> Cpu.y(0x0000) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0001 == Cpu.y(cpu)
+
+      # 0x0001 -> 0x0002
+      cpu = cpu |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0002 == Cpu.y(cpu)
+
+      # 0x7FFF -> 0x8000
+      cpu = cpu |> Cpu.y(0x7FFF) |> execute_opcode(opcode)
+      assert false == Cpu.zero_flag(cpu)
+      assert true == Cpu.negative_flag(cpu)
+      assert 0x8000 == Cpu.y(cpu)
+
+      # 0xFFFF -> 0x0000
+      cpu = cpu |> Cpu.y(0xFFFF) |> execute_opcode(opcode)
+      assert true == Cpu.zero_flag(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert 0x0000 == Cpu.y(cpu)
+    end
+  end
+
   defp execute_opcode(cpu, opcode) do
     opcode |> Opcode.execute(cpu)
   end

@@ -6,7 +6,7 @@ defmodule Sneex.Ops.Increment do
 
   alias Sneex.{AddressMode, BasicTypes, Cpu, Memory}
 
-  @opaque t :: %__MODULE__{opcode: 0x1A | 0xEE | 0xE6 | 0xFE | 0xF6}
+  @opaque t :: %__MODULE__{opcode: 0x1A | 0xEE | 0xE6 | 0xFE | 0xF6 | 0xE8 | 0xC8}
 
   @spec new(byte()) :: nil | __MODULE__.t()
 
@@ -15,6 +15,8 @@ defmodule Sneex.Ops.Increment do
   def new(0xE6), do: %__MODULE__{opcode: 0xE6}
   def new(0xFE), do: %__MODULE__{opcode: 0xFE}
   def new(0xF6), do: %__MODULE__{opcode: 0xF6}
+  def new(0xE8), do: %__MODULE__{opcode: 0xE8}
+  def new(0xC8), do: %__MODULE__{opcode: 0xC8}
 
   def new(_opcode), do: nil
 
@@ -24,6 +26,8 @@ defmodule Sneex.Ops.Increment do
     def byte_size(%{opcode: 0xE6}), do: 2
     def byte_size(%{opcode: 0xFE}), do: 3
     def byte_size(%{opcode: 0xF6}), do: 2
+    def byte_size(%{opcode: 0xE8}), do: 1
+    def byte_size(%{opcode: 0xC8}), do: 1
 
     def total_cycles(%{opcode: 0x1A}, _cpu), do: 2
 
@@ -48,6 +52,10 @@ defmodule Sneex.Ops.Increment do
       page_cycles = cpu |> Cpu.direct_page() |> add_direct_page_cycles()
       6 + status_cycles + page_cycles
     end
+
+    def total_cycles(%{opcode: 0xE8}, _cpu), do: 2
+
+    def total_cycles(%{opcode: 0xC8}, _cpu), do: 2
 
     defp add_16_bit_cycles(:bit8), do: 0
     defp add_16_bit_cycles(_status), do: 2
@@ -80,18 +88,33 @@ defmodule Sneex.Ops.Increment do
       cpu |> AddressMode.direct_page_indexed_x(operand) |> increment_from_address(cpu)
     end
 
+    def execute(%{opcode: 0xE8}, cpu) do
+      x = Cpu.x(cpu)
+      {new_x, cpu} = cpu |> Cpu.index_size() |> increment(x, cpu)
+      cpu |> Cpu.x(new_x)
+    end
+
+    def execute(%{opcode: 0xC8}, cpu) do
+      y = Cpu.y(cpu)
+      {new_y, cpu} = cpu |> Cpu.index_size() |> increment(y, cpu)
+      cpu |> Cpu.y(new_y)
+    end
+
     defp increment_from_address(address, cpu = %Cpu{}) do
       data = Cpu.read_data(cpu, address)
       {new_value, cpu} = increment(data, cpu)
       Cpu.write_data(cpu, address, new_value)
     end
 
-    defp increment(value, cpu = %Cpu{}) do
-      bitness = cpu |> Cpu.acc_size()
+    defp increment(bitness, value, cpu = %Cpu{}) do
       {new_value, zf, nf} = increment(value, bitness)
 
       new_cpu = cpu |> Cpu.zero_flag(zf) |> Cpu.negative_flag(nf)
       {new_value, new_cpu}
+    end
+
+    defp increment(value, cpu = %Cpu{}) do
+      cpu |> Cpu.acc_size() |> increment(value, cpu)
     end
 
     defp increment(0xFF, :bit8), do: {0, true, false}
@@ -122,5 +145,9 @@ defmodule Sneex.Ops.Increment do
       dp = Memory.read_byte(memory, address + 1)
       "INC #{BasicTypes.format_byte(dp)},X"
     end
+
+    def disasm(%{opcode: 0xE8}, _memory, _address), do: "INX"
+
+    def disasm(%{opcode: 0xC8}, _memory, _address), do: "INY"
   end
 end

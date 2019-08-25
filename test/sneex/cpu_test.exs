@@ -19,24 +19,6 @@ defmodule Sneex.CpuTest do
     assert 0x050403 == Sneex.Cpu.read_operand(cpu, 3)
   end
 
-  describe "read_absolute_address/2" do
-    test "16-bit", %{cpu: cpu} do
-      cpu = Sneex.Cpu.acc_size(cpu, :bit16)
-
-      assert 0x0201 == Sneex.Cpu.read_absolute_address(cpu, 1)
-      assert 0x0403 == Sneex.Cpu.read_absolute_address(cpu, 3)
-      assert 0x0100 == Sneex.Cpu.read_absolute_address(cpu, 0)
-    end
-
-    test "8-bit", %{cpu: cpu} do
-      cpu = Sneex.Cpu.acc_size(cpu, :bit8)
-
-      assert 0x01 == Sneex.Cpu.read_absolute_address(cpu, 1)
-      assert 0x03 == Sneex.Cpu.read_absolute_address(cpu, 3)
-      assert 0x00 == Sneex.Cpu.read_absolute_address(cpu, 0)
-    end
-  end
-
   describe "write_data/3" do
     test "16-bit", %{cpu: cpu} do
       cpu = Sneex.Cpu.acc_size(cpu, :bit16)
