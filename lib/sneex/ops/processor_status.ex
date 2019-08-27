@@ -1,7 +1,8 @@
 defmodule Sneex.Ops.ProcessorStatus do
   @moduledoc """
   This represents the op codes for interacting with the processor status bits.
-  This includes the following commands: CLC, SEC, CLD, SED, REP, SEP, SEI, CLI, and CLV
+  This includes the following commands:
+  CLC, SEC, CLD, SED, REP, SEP, SEI, CLI, CLV, NOP, XBA, and XCE
   """
   defstruct [:opcode]
 
@@ -9,16 +10,19 @@ defmodule Sneex.Ops.ProcessorStatus do
   alias Sneex.{BasicTypes, Cpu, Memory}
 
   @opaque t :: %__MODULE__{
-            opcode: 0x18 | 0x38 | 0xD8 | 0xF8 | 0xC2 | 0xE2 | 0x78 | 0x58 | 0xB8 | 0xEA
+            opcode:
+              0x18 | 0x38 | 0xD8 | 0xF8 | 0xC2 | 0xE2 | 0x78 | 0x58 | 0xB8 | 0xEA | 0xEB | 0xFB
           }
 
   @spec new(byte()) :: nil | __MODULE__.t()
 
-  def new(oc) when oc == 0x18 or oc == 0x38 or oc == 0xD8 or oc == 0xF8 or oc == 0xC2 do
+  def new(oc)
+      when oc == 0x18 or oc == 0x38 or oc == 0xD8 or oc == 0xF8 or oc == 0xC2 or oc == 0xEB do
     %__MODULE__{opcode: oc}
   end
 
-  def new(oc) when oc == 0xE2 or oc == 0x78 or oc == 0x58 or oc == 0xB8 or oc == 0xEA do
+  def new(oc)
+      when oc == 0xE2 or oc == 0x78 or oc == 0x58 or oc == 0xB8 or oc == 0xEA or oc == 0xFB do
     %__MODULE__{opcode: oc}
   end
 
@@ -35,6 +39,8 @@ defmodule Sneex.Ops.ProcessorStatus do
     @cli 0x58
     @clv 0xB8
     @nop 0xEA
+    @xba 0xEB
+    @xce 0xFB
 
     def byte_size(%{opcode: @clc}), do: 1
     def byte_size(%{opcode: @sec}), do: 1
@@ -46,6 +52,8 @@ defmodule Sneex.Ops.ProcessorStatus do
     def byte_size(%{opcode: @cli}), do: 1
     def byte_size(%{opcode: @clv}), do: 1
     def byte_size(%{opcode: @nop}), do: 1
+    def byte_size(%{opcode: @xba}), do: 1
+    def byte_size(%{opcode: @xce}), do: 1
 
     def total_cycles(%{opcode: @clc}, _cpu), do: 2
     def total_cycles(%{opcode: @sec}, _cpu), do: 2
@@ -57,6 +65,8 @@ defmodule Sneex.Ops.ProcessorStatus do
     def total_cycles(%{opcode: @cli}, _cpu), do: 2
     def total_cycles(%{opcode: @clv}, _cpu), do: 2
     def total_cycles(%{opcode: @nop}, _cpu), do: 2
+    def total_cycles(%{opcode: @xba}, _cpu), do: 3
+    def total_cycles(%{opcode: @xce}, _cpu), do: 2
 
     def execute(%{opcode: @clc}, cpu), do: cpu |> Cpu.carry_flag(false)
     def execute(%{opcode: @sec}, cpu), do: cpu |> Cpu.carry_flag(true)
@@ -66,6 +76,19 @@ defmodule Sneex.Ops.ProcessorStatus do
     def execute(%{opcode: @cli}, cpu), do: cpu |> Cpu.irq_disable(false)
     def execute(%{opcode: @clv}, cpu), do: cpu |> Cpu.overflow_flag(false)
     def execute(%{opcode: @nop}, cpu), do: cpu
+
+    def execute(%{opcode: @xba}, cpu) do
+      b = cpu |> Cpu.b()
+      a = cpu |> Cpu.a() |> bsl(8)
+      c = b + a
+      cpu |> Cpu.acc(c) |> Cpu.negative_flag(c > 0x7FFF) |> Cpu.zero_flag(c == 0x0000)
+    end
+
+    def execute(%{opcode: @xce}, cpu) do
+      carry_flag = Cpu.carry_flag(cpu)
+      emu_mode = Cpu.emu_mode(cpu)
+      cpu |> exchange_carry_and_emu(carry_flag, emu_mode)
+    end
 
     def execute(%{opcode: @rep}, cpu) do
       operand = Cpu.read_operand(cpu, 1)
@@ -165,6 +188,22 @@ defmodule Sneex.Ops.ProcessorStatus do
 
     defp modify_carry_flag(cpu_mask, _), do: cpu_mask
 
+    # Not switching modes, so do nothing:
+    defp exchange_carry_and_emu(cpu, _carry = true, _emu_mode = :emulation), do: cpu
+    defp exchange_carry_and_emu(cpu, _carry = false, _emu_mode = :native), do: cpu
+
+    defp exchange_carry_and_emu(cpu, _carry = true, _emu_mode) do
+      cpu |> Cpu.carry_flag(false) |> Cpu.emu_mode(:emulation)
+    end
+
+    defp exchange_carry_and_emu(cpu, _carry = false, _emu_mode) do
+      cpu
+      |> Cpu.carry_flag(true)
+      |> Cpu.emu_mode(:native)
+      |> Cpu.acc_size(:bit8)
+      |> Cpu.index_size(:bit8)
+    end
+
     def disasm(%{opcode: @clc}, _memory, _address), do: "CLC"
     def disasm(%{opcode: @sec}, _memory, _address), do: "SEC"
     def disasm(%{opcode: @cld}, _memory, _address), do: "CLD"
@@ -173,6 +212,8 @@ defmodule Sneex.Ops.ProcessorStatus do
     def disasm(%{opcode: @cli}, _memory, _address), do: "CLI"
     def disasm(%{opcode: @clv}, _memory, _address), do: "CLV"
     def disasm(%{opcode: @nop}, _memory, _address), do: "NOP"
+    def disasm(%{opcode: @xba}, _memory, _address), do: "XBA"
+    def disasm(%{opcode: @xce}, _memory, _address), do: "XCE"
 
     def disasm(%{opcode: @rep}, memory, address) do
       status_bits = Memory.read_byte(memory, address + 1)

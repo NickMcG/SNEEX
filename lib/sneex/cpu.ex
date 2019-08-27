@@ -123,6 +123,40 @@ defmodule Sneex.Cpu do
   @spec acc(__MODULE__.t(), word()) :: __MODULE__.t()
   def acc(cpu = %__MODULE__{}, acc), do: %__MODULE__{cpu | acc: acc}
 
+  @doc "
+  Gets the lower 8 bits of the accumulator (referred to as A).
+
+  ## Examples
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xDEAD) |> Sneex.Cpu.a()
+  0xAD
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xBEEF) |> Sneex.Cpu.a()
+  0xEF
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0x42) |> Sneex.Cpu.a()
+  0x42
+  "
+  @spec a(__MODULE__.t()) :: byte()
+  def a(%__MODULE__{acc: c}), do: c |> band(0x00FF)
+
+  @doc "
+  Gets the top 8 bits of the accumulator (referred to as B).
+
+  ## Examples
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xDEAD) |> Sneex.Cpu.b()
+  0xDE
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xBEEF) |> Sneex.Cpu.b()
+  0xBE
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0x42) |> Sneex.Cpu.b()
+  0x00
+  "
+  @spec b(__MODULE__.t()) :: byte()
+  def b(%__MODULE__{acc: c}), do: c |> band(0xFF00) |> bsr(8)
+
   @doc "Gets the size of the accumulator, either :bit8 or :bit16."
   @spec acc_size(__MODULE__.t()) :: bit_size()
   def acc_size(%__MODULE__{emu_mode: :emulation}), do: :bit8
@@ -202,6 +236,33 @@ defmodule Sneex.Cpu do
   @doc "Sets the size of the index registers, either :bit8 or :bit16"
   @spec index_size(__MODULE__.t(), bit_size()) :: __MODULE__.t()
   def index_size(cpu = %__MODULE__{}, size), do: %__MODULE__{cpu | index_size: size}
+
+  @doc "
+  This allows reading the break (b) flag while the CPU is in emulation mode.
+  It converts the index size (x) flag into the break flag while the CPU is in emulation mode.
+
+  ## Examples
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.break_flag()
+  true
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.break_flag()
+  false
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.break_flag(false) |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.index_size()
+  :bit16
+  "
+  @spec break_flag(__MODULE__.t()) :: boolean
+  def break_flag(%__MODULE__{emu_mode: :emulation, index_size: :bit8}), do: true
+  def break_flag(%__MODULE__{emu_mode: :emulation, index_size: :bit16}), do: false
+
+  @doc "This allows setting the break (b) flag while the CPU is in emulation mode."
+  @spec break_flag(__MODULE__.t(), any) :: __MODULE__.t()
+  def break_flag(cpu = %__MODULE__{emu_mode: :emulation}, true),
+    do: %__MODULE__{cpu | index_size: :bit8}
+
+  def break_flag(cpu = %__MODULE__{emu_mode: :emulation}, false),
+    do: %__MODULE__{cpu | index_size: :bit16}
 
   @doc "
   Get the current value for the data bank register

@@ -395,6 +395,78 @@ defmodule Sneex.Ops.ProcessorStatusTest do
     end
   end
 
+  describe "exchange the B and A accumulators (xba)" do
+    setup do
+      memory = <<>> |> Memory.new()
+      cpu = Cpu.new(memory)
+
+      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xEB)}
+    end
+
+    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode)
+      assert 3 == Opcode.total_cycles(opcode, cpu)
+      assert "XBA" == Opcode.disasm(opcode, cpu, memory)
+    end
+
+    test "execute/3", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16) |> Cpu.acc(0x0000)
+      cpu = cpu |> Cpu.negative_flag(true) |> Cpu.zero_flag(false)
+
+      cpu = execute_opcode(cpu, opcode)
+      assert 0x0000 == Cpu.acc(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert true == Cpu.zero_flag(cpu)
+
+      cpu = cpu |> Cpu.acc(0x8000) |> execute_opcode(opcode)
+      assert 0x0080 == Cpu.acc(cpu)
+      assert false == Cpu.negative_flag(cpu)
+      assert false == Cpu.zero_flag(cpu)
+
+      cpu = cpu |> execute_opcode(opcode)
+      assert 0x8000 == Cpu.acc(cpu)
+      assert true == Cpu.negative_flag(cpu)
+      assert false == Cpu.zero_flag(cpu)
+    end
+  end
+
+  describe "exchange carry and emulation bits (xce)" do
+    setup do
+      memory = <<>> |> Memory.new()
+      cpu = Cpu.new(memory)
+
+      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xFB)}
+    end
+
+    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode)
+      assert 2 == Opcode.total_cycles(opcode, cpu)
+      assert "XCE" == Opcode.disasm(opcode, cpu, memory)
+    end
+
+    test "execute/3", %{cpu: cpu, opcode: opcode} do
+      cpu =
+        cpu
+        |> Cpu.emu_mode(:emulation)
+        |> Cpu.carry_flag(false)
+        |> Cpu.acc_size(:bit16)
+        |> Cpu.index_size(:bit16)
+
+      cpu = cpu |> execute_opcode(opcode)
+      assert :native == Cpu.emu_mode(cpu)
+      assert true == Cpu.carry_flag(cpu)
+      assert :bit8 = Cpu.acc_size(cpu)
+      assert :bit8 = Cpu.index_size(cpu)
+
+      cpu = cpu |> execute_opcode(opcode)
+      assert :emulation == Cpu.emu_mode(cpu)
+      assert false == Cpu.carry_flag(cpu)
+      assert :bit8 = Cpu.acc_size(cpu)
+      assert :bit8 = Cpu.index_size(cpu)
+      assert true == Cpu.break_flag(cpu)
+    end
+  end
+
   defp execute_opcode(cpu, opcode) do
     opcode |> Opcode.execute(cpu)
   end
