@@ -24,7 +24,7 @@ defmodule Sneex.Ops.IncrementTest do
     end
 
     test "execute/3 with 16-bit mode", %{cpu: cpu, opcode: opcode} do
-      cpu = Cpu.acc_size(cpu, :bit16)
+      cpu = cpu |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
 
       # 0x0000 -> 0x0001
       cpu = Opcode.execute(opcode, cpu)
@@ -147,7 +147,7 @@ defmodule Sneex.Ops.IncrementTest do
       data = page <> page
 
       memory = Memory.new(data)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit16)
+      cpu = memory |> Cpu.new() |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
       opcode = Increment.new(0xEE)
 
       {:ok, cpu: cpu, memory: memory, opcode: opcode}
@@ -247,7 +247,7 @@ defmodule Sneex.Ops.IncrementTest do
       commands = <<0xE6, 0x00, 0xE6, 0x02, 0xE6, 0x04, 0xE6, 0x06>>
 
       memory = Memory.new(data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit16)
+      cpu = memory |> Cpu.new() |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
       opcode = Increment.new(0xE6)
 
       {:ok, cpu: cpu, memory: memory, opcode: opcode}
@@ -345,7 +345,15 @@ defmodule Sneex.Ops.IncrementTest do
       commands = <<0xFE, 0x00, 0x00, 0xFE, 0x02, 0x00, 0xFE, 0x04, 0x00, 0xFE, 0x06, 0x00>>
 
       memory = Sneex.Memory.new(buffer <> buffer <> data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit16) |> Cpu.index_size(:bit16) |> Cpu.x(0x0010)
+
+      cpu =
+        memory
+        |> Cpu.new()
+        |> Cpu.emu_mode(:native)
+        |> Cpu.acc_size(:bit16)
+        |> Cpu.index_size(:bit16)
+        |> Cpu.x(0x0010)
+
       opcode = Increment.new(0xFE)
 
       {:ok, cpu: cpu, memory: memory, opcode: opcode}
@@ -445,7 +453,15 @@ defmodule Sneex.Ops.IncrementTest do
       commands = <<0xF6, 0x00, 0xF6, 0x02, 0xF6, 0x04, 0xF6, 0x06>>
 
       memory = Memory.new(buffer <> buffer <> data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.index_size(:bit8) |> Cpu.acc_size(:bit16) |> Cpu.x(0x10)
+
+      cpu =
+        memory
+        |> Cpu.new()
+        |> Cpu.emu_mode(:native)
+        |> Cpu.index_size(:bit8)
+        |> Cpu.acc_size(:bit16)
+        |> Cpu.x(0x10)
+
       opcode = Increment.new(0xF6)
 
       {:ok, cpu: cpu, memory: memory, opcode: opcode}
@@ -531,7 +547,13 @@ defmodule Sneex.Ops.IncrementTest do
 
     test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
-      cpu = cpu |> Cpu.index_size(:bit16) |> Cpu.x(0x0000) |> execute_opcode(opcode)
+      cpu =
+        cpu
+        |> Cpu.emu_mode(:native)
+        |> Cpu.index_size(:bit16)
+        |> Cpu.x(0x0000)
+        |> execute_opcode(opcode)
+
       assert false == Cpu.zero_flag(cpu)
       assert false == Cpu.negative_flag(cpu)
       assert 0x0001 == Cpu.x(cpu)
@@ -599,7 +621,13 @@ defmodule Sneex.Ops.IncrementTest do
 
     test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
-      cpu = cpu |> Cpu.index_size(:bit16) |> Cpu.y(0x0000) |> execute_opcode(opcode)
+      cpu =
+        cpu
+        |> Cpu.emu_mode(:native)
+        |> Cpu.index_size(:bit16)
+        |> Cpu.y(0x0000)
+        |> execute_opcode(opcode)
+
       assert false == Cpu.zero_flag(cpu)
       assert false == Cpu.negative_flag(cpu)
       assert 0x0001 == Cpu.y(cpu)

@@ -4,7 +4,7 @@ defmodule Sneex.AddressModeTest do
   doctest Sneex.AddressMode
 
   setup do
-    cpu = <<>> |> Memory.new() |> Cpu.new()
+    cpu = <<>> |> Memory.new() |> Cpu.new() |> Cpu.emu_mode(:native)
     {:ok, cpu: cpu}
   end
 
