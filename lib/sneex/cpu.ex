@@ -105,14 +105,18 @@ defmodule Sneex.Cpu do
   iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xFFFF) |> Sneex.Cpu.acc()
   0xFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xFFFF) |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.acc()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:emulation) |> Sneex.Cpu.acc(0xFFFF) |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.acc()
+  0xFF
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.acc(0xFFFF) |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.acc()
   0xFFFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xFFFFFF) |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.acc()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.acc(0xFFFFFF) |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.acc()
   0xFFFF
   "
   @spec acc(__MODULE__.t()) :: word()
   def acc(%__MODULE__{acc: a, acc_size: :bit8}), do: a &&& 0xFF
+  def acc(%__MODULE__{acc: a, emu_mode: :emulation}), do: a &&& 0xFF
   def acc(%__MODULE__{acc: a}), do: a &&& 0xFFFF
 
   @doc "Sets the accumulator value for the CPU."
@@ -121,6 +125,7 @@ defmodule Sneex.Cpu do
 
   @doc "Gets the size of the accumulator, either :bit8 or :bit16."
   @spec acc_size(__MODULE__.t()) :: bit_size()
+  def acc_size(%__MODULE__{emu_mode: :emulation}), do: :bit8
   def acc_size(%__MODULE__{acc_size: acc_size}), do: acc_size
 
   @doc "Sets the size of the accumulator, either :bit8 or :bit16."
@@ -140,14 +145,18 @@ defmodule Sneex.Cpu do
   iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.x(0xFFFF) |> Sneex.Cpu.x()
   0xFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.x(0xFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.x()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.x(0xFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.emu_mode(:emulation) |> Sneex.Cpu.x()
+  0xFF
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.x(0xFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.x()
   0xFFFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.x(0xFFFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.x()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.x(0xFFFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.x()
   0xFFFF
   "
   @spec x(__MODULE__.t()) :: word()
   def x(%__MODULE__{x: x, index_size: :bit8}), do: x &&& 0xFF
+  def x(%__MODULE__{x: x, emu_mode: :emulation}), do: x &&& 0xFF
   def x(%__MODULE__{x: x}), do: x &&& 0xFFFF
 
   @doc "Sets the x index for the CPU."
@@ -164,17 +173,21 @@ defmodule Sneex.Cpu do
   iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.y(0xFF) |> Sneex.Cpu.y()
   0xFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.y(0xFFFF) |> Sneex.Cpu.y()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.y(0xFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.emu_mode(:emulation) |> Sneex.Cpu.y()
   0xFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.y(0xFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.y()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.y(0xFFFF) |> Sneex.Cpu.y()
+  0xFF
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.y(0xFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.y()
   0xFFFF
 
-  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.y(0xFFFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.y()
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.emu_mode(:native) |> Sneex.Cpu.y(0xFFFFFF) |> Sneex.Cpu.index_size(:bit16) |> Sneex.Cpu.y()
   0xFFFF
   "
   @spec y(__MODULE__.t()) :: word()
   def y(%__MODULE__{y: y, index_size: :bit8}), do: y &&& 0xFF
+  def y(%__MODULE__{y: y, emu_mode: :emulation}), do: y &&& 0xFF
   def y(%__MODULE__{y: y}), do: y &&& 0xFFFF
 
   @doc "Sets the y index for the CPU."
@@ -183,6 +196,7 @@ defmodule Sneex.Cpu do
 
   @doc "Gets the size of the index registers, either :bit8 or :bit16"
   @spec index_size(__MODULE__.t()) :: bit_size()
+  def index_size(%__MODULE__{emu_mode: :emulation}), do: :bit8
   def index_size(%__MODULE__{index_size: size}), do: size
 
   @doc "Sets the size of the index registers, either :bit8 or :bit16"
