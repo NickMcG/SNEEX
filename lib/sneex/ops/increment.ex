@@ -70,7 +70,7 @@ defmodule Sneex.Ops.Increment do
 
     def execute(%{opcode: 0xEE}, cpu) do
       operand = Cpu.read_operand(cpu, 2)
-      cpu |> AddressMode.absolute(operand) |> increment_from_address(cpu)
+      cpu |> AddressMode.absolute(true, operand) |> increment_from_address(cpu)
     end
 
     def execute(%{opcode: 0xE6}, cpu) do

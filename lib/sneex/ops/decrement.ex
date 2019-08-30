@@ -70,7 +70,7 @@ defmodule Sneex.Ops.Decrement do
 
     def execute(%{opcode: 0xCE}, cpu) do
       operand = Cpu.read_operand(cpu, 2)
-      cpu |> AddressMode.absolute(operand) |> decrement_from_address(cpu)
+      cpu |> AddressMode.absolute(true, operand) |> decrement_from_address(cpu)
     end
 
     def execute(%{opcode: 0xC6}, cpu) do

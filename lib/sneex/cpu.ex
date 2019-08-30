@@ -157,6 +157,20 @@ defmodule Sneex.Cpu do
   @spec b(__MODULE__.t()) :: byte()
   def b(%__MODULE__{acc: c}), do: c |> band(0xFF00) |> bsr(8)
 
+  @doc "
+  Gets the full 16 bits of the accumulator (referred to as C), regardless of the current memory mode.
+
+  ## Examples
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xDEAD) |> Sneex.Cpu.c()
+  0xDEAD
+
+  iex> <<>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc(0xBEEF) |> Sneex.Cpu.c()
+  0xBEEF
+  "
+  @spec c(__MODULE__.t()) :: byte()
+  def c(%__MODULE__{acc: c}), do: c |> band(0xFFFF)
+
   @doc "Gets the size of the accumulator, either :bit8 or :bit16."
   @spec acc_size(__MODULE__.t()) :: bit_size()
   def acc_size(%__MODULE__{emu_mode: :emulation}), do: :bit8
@@ -490,8 +504,14 @@ defmodule Sneex.Cpu do
   iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit8) |> Sneex.Cpu.read_data(0x000001)
   0x02
 
+  iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit8) |> Sneex.Cpu.read_data(0x000000, 2)
+  0x0201
+
   iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.read_data(0x000000)
   0x0201
+
+  iex> <<1, 2>> |> Sneex.Memory.new() |> Sneex.Cpu.new() |> Sneex.Cpu.acc_size(:bit16) |> Sneex.Cpu.read_data(0x000000, 1)
+  0x01
   "
   @spec read_data(__MODULE__.t(), long()) :: byte() | word()
   def read_data(%__MODULE__{memory: m, acc_size: :bit8}, address) do
@@ -500,6 +520,19 @@ defmodule Sneex.Cpu do
 
   def read_data(%__MODULE__{memory: m, acc_size: :bit16}, address) do
     Sneex.Memory.read_word(m, address)
+  end
+
+  @spec read_data(__MODULE__.t(), long(), 1 | 2 | 3) :: byte() | word()
+  def read_data(%__MODULE__{memory: m}, address, 1) do
+    Sneex.Memory.read_byte(m, address)
+  end
+
+  def read_data(%__MODULE__{memory: m}, address, 2) do
+    Sneex.Memory.read_word(m, address)
+  end
+
+  def read_data(%__MODULE__{memory: m}, address, 3) do
+    Sneex.Memory.read_long(m, address)
   end
 
   @doc "
