@@ -126,8 +126,13 @@ defmodule Sneex.AddressMode do
   @spec stack_relative(Cpu.t()) :: long()
   def stack_relative(cpu = %Cpu{}) do
     operand = cpu |> Cpu.read_operand(1)
-    stack = cpu |> Cpu.stack_ptr()
-    (stack + operand) |> band(0xFFFFFF)
+    cpu |> Cpu.stack_ptr() |> calc_offset(operand)
+  end
+
+  @spec stack_relative_indirect_indexed_y(Cpu.t()) :: long()
+  def stack_relative_indirect_indexed_y(cpu = %Cpu{}) do
+    offset = cpu |> stack_relative() |> read_indirect(cpu, 2)
+    cpu |> Cpu.data_bank() |> absolute_offset(offset) |> indexed(cpu, :y)
   end
 
   defp indexed(addr, cpu = %Cpu{}, :x), do: (addr + Cpu.x(cpu)) |> band(0xFFFFFF)
@@ -138,8 +143,4 @@ defmodule Sneex.AddressMode do
   defp absolute_offset(upper_byte, addr), do: upper_byte |> bsl(16) |> bor(addr) |> band(0xFFFFFF)
 
   defp read_indirect(addr, cpu = %Cpu{}, size), do: cpu |> Cpu.read_data(addr, size)
-
-  # Still need to support the 13 or so stack-based addressing modes
-  # Page 310
-  # Maybe there should be a stack module? Or, stack address module?
 end

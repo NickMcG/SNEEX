@@ -322,4 +322,35 @@ defmodule Sneex.AddressModeTest do
     cpu = cpu |> Cpu.pc(0x0003) |> Cpu.stack_ptr(0xDEAD)
     assert 0x00DF20 == AddressMode.stack_relative(cpu)
   end
+
+  test "stack_relative_indirect_indexed_y" do
+    data =
+      DataBuilder.build_block_of_00s(0xA) <>
+        <<0x00, 0xFE, 0xFF, 0x00, 0x73>> <>
+        DataBuilder.build_block_of_00s(0xFFF0) <> <<0x00, 0x01, 0x02, 0x03, 0x4>>
+
+    cpu =
+      data
+      |> Memory.new()
+      |> Cpu.new()
+      |> Cpu.stack_ptr(0x000A)
+      |> Cpu.program_bank(0x01)
+      |> Cpu.y(0x42)
+      |> Cpu.data_bank(0xAA)
+
+    cpu = cpu |> Cpu.pc(0x0000)
+    assert 0xAAFE42 == AddressMode.stack_relative_indirect_indexed_y(cpu)
+
+    # cpu = cpu |> Cpu.pc(0x0001)
+    # assert 0xAAFFFE == AddressMode.stack_relative_indirect_indexed_y(cpu)
+
+    cpu = cpu |> Cpu.pc(0x0002)
+    assert 0xAA0141 == AddressMode.stack_relative_indirect_indexed_y(cpu)
+
+    cpu = cpu |> Cpu.pc(0x0003)
+    assert 0xAA7342 == AddressMode.stack_relative_indirect_indexed_y(cpu)
+
+    cpu = cpu |> Cpu.pc(0x0004)
+    assert 0xAA00B5 == AddressMode.stack_relative_indirect_indexed_y(cpu)
+  end
 end
