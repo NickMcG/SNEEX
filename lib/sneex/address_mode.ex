@@ -10,66 +10,43 @@ defmodule Sneex.AddressMode do
   @typep long :: BasicTypes.long()
 
   @spec absolute(Cpu.t(), boolean(), word()) :: long()
-  def absolute(cpu = %Cpu{}, _data_address? = true, address_offset) do
-    cpu |> Cpu.data_bank() |> absolute(address_offset)
-  end
+  def absolute(cpu = %Cpu{}, _data? = true, address_offset),
+    do: cpu |> Cpu.data_bank() |> absolute_offset(address_offset)
 
-  def absolute(cpu = %Cpu{}, _data_address? = false, address_offset) do
-    cpu |> Cpu.program_bank() |> absolute(address_offset)
-  end
-
-  defp absolute(upper_byte, addr), do: upper_byte |> bsl(16) |> bor(addr)
+  def absolute(cpu = %Cpu{}, _data? = false, address_offset),
+    do: cpu |> Cpu.program_bank() |> absolute_offset(address_offset)
 
   @spec absolute_indexed_x(Cpu.t(), word()) :: long()
-  def absolute_indexed_x(cpu = %Cpu{}, address_offset) do
-    addr = absolute(cpu, true, address_offset) + Cpu.x(cpu)
-    addr |> band(0xFFFFFF)
-  end
+  def absolute_indexed_x(cpu = %Cpu{}, offset),
+    do: cpu |> absolute(true, offset) |> indexed(cpu, :x)
 
   @spec absolute_indexed_y(Cpu.t(), word()) :: long()
-  def absolute_indexed_y(cpu = %Cpu{}, address_offset) do
-    addr = absolute(cpu, true, address_offset) + Cpu.y(cpu)
-    addr |> band(0xFFFFFF)
-  end
+  def absolute_indexed_y(cpu = %Cpu{}, offset),
+    do: cpu |> absolute(true, offset) |> indexed(cpu, :y)
 
   @spec absolute_indexed_indirect(Cpu.t()) :: long()
   def absolute_indexed_indirect(cpu = %Cpu{}) do
-    pbr = cpu |> Cpu.program_bank() |> bsl(16)
+    pbr = cpu |> Cpu.program_bank()
     operand = cpu |> Cpu.read_operand(2)
-    x = cpu |> Cpu.x()
-    indirect_addr = (pbr + operand + x) |> band(0xFFFFFF)
-
-    addr = cpu |> Cpu.read_data(indirect_addr, 2)
-    (pbr + addr) |> band(0xFFFFFF)
+    addr = pbr |> absolute_offset(operand) |> indexed(cpu, :x) |> read_indirect(cpu, 2)
+    pbr |> absolute_offset(addr)
   end
 
   @spec absolute_indirect(Cpu.t()) :: long()
   def absolute_indirect(cpu = %Cpu{}) do
-    pbr = cpu |> Cpu.program_bank() |> bsl(16)
-    indirect_addr = cpu |> Cpu.read_operand(2)
-
-    addr = cpu |> Cpu.read_data(indirect_addr, 2)
-    (pbr + addr) |> band(0xFFFFFF)
+    addr = cpu |> Cpu.read_operand(2) |> read_indirect(cpu, 2)
+    cpu |> Cpu.program_bank() |> absolute_offset(addr)
   end
 
   @spec absolute_indirect_long(Cpu.t()) :: long()
-  def absolute_indirect_long(cpu = %Cpu{}) do
-    indirect_addr = cpu |> Cpu.read_operand(2)
-
-    cpu |> Cpu.read_data(indirect_addr, 3)
-  end
+  def absolute_indirect_long(cpu = %Cpu{}),
+    do: cpu |> Cpu.read_operand(2) |> read_indirect(cpu, 3)
 
   @spec absolute_long(Cpu.t()) :: long()
-  def absolute_long(cpu = %Cpu{}) do
-    cpu |> Cpu.read_operand(3)
-  end
+  def absolute_long(cpu = %Cpu{}), do: cpu |> Cpu.read_operand(3)
 
   @spec absolute_long_indexed_x(Cpu.t()) :: long()
-  def absolute_long_indexed_x(cpu = %Cpu{}) do
-    base = cpu |> Cpu.read_operand(3)
-    x = cpu |> Cpu.x()
-    (base + x) |> band(0xFFFFFF)
-  end
+  def absolute_long_indexed_x(cpu = %Cpu{}), do: cpu |> Cpu.read_operand(3) |> indexed(cpu, :x)
 
   @spec block_move(Cpu.t()) :: {long(), long(), long()}
   def block_move(cpu = %Cpu{}) do
@@ -85,97 +62,84 @@ defmodule Sneex.AddressMode do
   end
 
   @spec direct_page(Cpu.t(), word()) :: long()
-  def direct_page(cpu = %Cpu{}, address_offset) do
-    dpr = Cpu.direct_page(cpu)
-    (dpr + address_offset) |> band(0x00FFFF)
-  end
+  def direct_page(cpu = %Cpu{}, address_offset),
+    do: cpu |> Cpu.direct_page() |> calc_offset(address_offset)
 
   @spec direct_page_indexed_x(Cpu.t(), word()) :: long()
-  def direct_page_indexed_x(cpu = %Cpu{}, address_offset) do
-    x = Cpu.x(cpu)
-    direct_page(cpu, address_offset + x)
-  end
+  def direct_page_indexed_x(cpu = %Cpu{}, address_offset),
+    do: direct_page(cpu, address_offset + Cpu.x(cpu))
 
   @spec direct_page_indexed_y(Cpu.t(), word()) :: long()
-  def direct_page_indexed_y(cpu = %Cpu{}, address_offset) do
-    y = Cpu.y(cpu)
-    direct_page(cpu, address_offset + y)
-  end
+  def direct_page_indexed_y(cpu = %Cpu{}, address_offset),
+    do: direct_page(cpu, address_offset + Cpu.y(cpu))
 
   @spec direct_page_indexed_indirect(Cpu.t()) :: long()
   def direct_page_indexed_indirect(cpu = %Cpu{}) do
-    dbr = cpu |> Cpu.data_bank() |> bsl(16)
-    x = cpu |> Cpu.x()
-    dpr = cpu |> Cpu.direct_page()
-    operand = cpu |> Cpu.read_operand(1)
-    indirect_addr = (dpr + operand + x) |> band(0xFFFF)
-
-    addr = cpu |> Cpu.read_data(indirect_addr, 2)
-    (dbr + addr) |> band(0xFFFFFF)
+    temp_addr = Cpu.x(cpu) + Cpu.read_operand(cpu, 1)
+    addr = cpu |> direct_page(temp_addr) |> read_indirect(cpu, 2)
+    cpu |> Cpu.data_bank() |> absolute_offset(addr)
   end
 
   @spec direct_page_indirect(Cpu.t()) :: long()
   def direct_page_indirect(cpu = %Cpu{}) do
-    dbr = cpu |> Cpu.data_bank() |> bsl(16)
-    dpr = cpu |> Cpu.direct_page()
     operand = cpu |> Cpu.read_operand(1)
-    indirect_addr = (dpr + operand) |> band(0xFFFF)
-
-    addr = cpu |> Cpu.read_data(indirect_addr, 2)
-    (dbr + addr) |> band(0xFFFFFF)
+    addr = cpu |> direct_page(operand) |> read_indirect(cpu, 2)
+    cpu |> Cpu.data_bank() |> absolute_offset(addr)
   end
 
   @spec direct_page_indirect_long(Cpu.t()) :: long()
   def direct_page_indirect_long(cpu = %Cpu{}) do
-    dpr = cpu |> Cpu.direct_page()
     operand = cpu |> Cpu.read_operand(1)
-    indirect_addr = (dpr + operand) |> band(0xFFFF)
-
-    cpu |> Cpu.read_data(indirect_addr, 3)
+    cpu |> direct_page(operand) |> read_indirect(cpu, 3)
   end
 
   @spec direct_page_indirect_indexed_y(Cpu.t()) :: long()
   def direct_page_indirect_indexed_y(cpu = %Cpu{}) do
-    dpr = cpu |> Cpu.direct_page()
     operand = cpu |> Cpu.read_operand(1)
-    indirect_addr = (dpr + operand) |> band(0xFFFF)
-
-    y = cpu |> Cpu.y()
-    dbr = cpu |> Cpu.data_bank() |> bsl(16)
-    base_addr = cpu |> Cpu.read_data(indirect_addr, 2)
-
-    (dbr + base_addr + y) |> band(0xFFFFFF)
+    base_addr = cpu |> direct_page(operand) |> read_indirect(cpu, 2)
+    cpu |> Cpu.data_bank() |> absolute_offset(base_addr) |> indexed(cpu, :y)
   end
 
   @spec direct_page_indirect_long_indexed_y(Cpu.t()) :: long()
   def direct_page_indirect_long_indexed_y(cpu = %Cpu{}) do
-    dpr = cpu |> Cpu.direct_page()
     operand = cpu |> Cpu.read_operand(1)
-    indirect_addr = (dpr + operand) |> band(0xFFFF)
+    cpu |> direct_page(operand) |> read_indirect(cpu, 3) |> indexed(cpu, :y)
+  end
 
-    y = cpu |> Cpu.y()
-    base_addr = cpu |> Cpu.read_data(indirect_addr, 3)
-
-    (base_addr + y) |> band(0xFFFFFF)
+  defp program_counter(cpu = %Cpu{}, offset) do
+    pc_with_offset = cpu |> Cpu.pc() |> calc_offset(offset)
+    cpu |> Cpu.program_bank() |> absolute_offset(pc_with_offset)
   end
 
   @spec program_counter_relative(Cpu.t()) :: long()
   def program_counter_relative(cpu = %Cpu{}) do
-    pbr = cpu |> Cpu.program_bank() |> bsl(16)
     operand = cpu |> Cpu.read_operand(1) |> BasicTypes.signed_byte()
-    pc = cpu |> Cpu.pc()
-
-    pbr + ((pc + 2 + operand) |> band(0xFFFFFF))
+    cpu |> program_counter(operand + 2)
   end
 
   @spec program_counter_relative_long(Cpu.t()) :: long()
   def program_counter_relative_long(cpu = %Cpu{}) do
-    pbr = cpu |> Cpu.program_bank() |> bsl(16)
     operand = cpu |> Cpu.read_operand(2) |> BasicTypes.signed_word()
-    pc = cpu |> Cpu.pc()
-
-    pbr + ((pc + 3 + operand) |> band(0xFFFFFF))
+    cpu |> program_counter(operand + 3)
   end
 
+  @spec stack_relative(Cpu.t()) :: long()
+  def stack_relative(cpu = %Cpu{}) do
+    operand = cpu |> Cpu.read_operand(1)
+    stack = cpu |> Cpu.stack_ptr()
+    (stack + operand) |> band(0xFFFFFF)
+  end
+
+  defp indexed(addr, cpu = %Cpu{}, :x), do: (addr + Cpu.x(cpu)) |> band(0xFFFFFF)
+  defp indexed(addr, cpu = %Cpu{}, :y), do: (addr + Cpu.y(cpu)) |> band(0xFFFFFF)
+
+  defp calc_offset(part1, part2), do: (part1 + part2) |> band(0xFFFF)
+
+  defp absolute_offset(upper_byte, addr), do: upper_byte |> bsl(16) |> bor(addr) |> band(0xFFFFFF)
+
+  defp read_indirect(addr, cpu = %Cpu{}, size), do: cpu |> Cpu.read_data(addr, size)
+
   # Still need to support the 13 or so stack-based addressing modes
+  # Page 310
+  # Maybe there should be a stack module? Or, stack address module?
 end

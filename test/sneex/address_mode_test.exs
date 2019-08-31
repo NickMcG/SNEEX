@@ -308,4 +308,18 @@ defmodule Sneex.AddressModeTest do
     cpu = cpu |> Cpu.pc(0x0002)
     assert 0x007305 == AddressMode.program_counter_relative_long(cpu)
   end
+
+  test "stack_relative/1" do
+    data = <<0x00, 0xFE, 0xFF, 0x00, 0x73>>
+    cpu = data |> Memory.new() |> Cpu.new() |> Cpu.emu_mode(:native)
+
+    cpu = cpu |> Cpu.program_bank(0x00) |> Cpu.pc(0x0000) |> Cpu.stack_ptr(0x1234)
+    assert 0x001332 == AddressMode.stack_relative(cpu)
+
+    cpu = cpu |> Cpu.program_bank(0x00) |> Cpu.pc(0x0001) |> Cpu.stack_ptr(0x4321)
+    assert 0x004420 == AddressMode.stack_relative(cpu)
+
+    cpu = cpu |> Cpu.pc(0x0003) |> Cpu.stack_ptr(0xDEAD)
+    assert 0x00DF20 == AddressMode.stack_relative(cpu)
+  end
 end
