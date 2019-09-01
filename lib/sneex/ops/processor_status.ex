@@ -7,7 +7,7 @@ defmodule Sneex.Ops.ProcessorStatus do
   defstruct [:opcode]
 
   use Bitwise
-  alias Sneex.{BasicTypes, Cpu, Memory}
+  alias Sneex.{BasicTypes, Cpu}
 
   @opaque t :: %__MODULE__{
             opcode:
@@ -42,31 +42,25 @@ defmodule Sneex.Ops.ProcessorStatus do
     @xba 0xEB
     @xce 0xFB
 
-    def byte_size(%{opcode: @clc}), do: 1
-    def byte_size(%{opcode: @sec}), do: 1
-    def byte_size(%{opcode: @cld}), do: 1
-    def byte_size(%{opcode: @sed}), do: 1
-    def byte_size(%{opcode: @rep}), do: 2
-    def byte_size(%{opcode: @sep}), do: 2
-    def byte_size(%{opcode: @sei}), do: 1
-    def byte_size(%{opcode: @cli}), do: 1
-    def byte_size(%{opcode: @clv}), do: 1
-    def byte_size(%{opcode: @nop}), do: 1
-    def byte_size(%{opcode: @xba}), do: 1
-    def byte_size(%{opcode: @xce}), do: 1
+    def byte_size(%{opcode: oc}, _cpu)
+        when oc == @clc or oc == @sec or oc == @cld or oc == @sed or oc == @sei,
+        do: 1
 
-    def total_cycles(%{opcode: @clc}, _cpu), do: 2
-    def total_cycles(%{opcode: @sec}, _cpu), do: 2
-    def total_cycles(%{opcode: @cld}, _cpu), do: 2
-    def total_cycles(%{opcode: @sed}, _cpu), do: 2
-    def total_cycles(%{opcode: @rep}, _cpu), do: 3
-    def total_cycles(%{opcode: @sep}, _cpu), do: 3
-    def total_cycles(%{opcode: @sei}, _cpu), do: 2
-    def total_cycles(%{opcode: @cli}, _cpu), do: 2
-    def total_cycles(%{opcode: @clv}, _cpu), do: 2
-    def total_cycles(%{opcode: @nop}, _cpu), do: 2
-    def total_cycles(%{opcode: @xba}, _cpu), do: 3
-    def total_cycles(%{opcode: @xce}, _cpu), do: 2
+    def byte_size(%{opcode: oc}, _cpu)
+        when oc == @cli or oc == @clv or oc == @nop or oc == @xba or oc == @xce,
+        do: 1
+
+    def byte_size(%{opcode: oc}, _cpu) when oc == @rep or oc == @sep, do: 2
+
+    def total_cycles(%{opcode: oc}, _cpu)
+        when oc == @clc or oc == @sec or oc == @cld or oc == @sed or oc == @sei,
+        do: 2
+
+    def total_cycles(%{opcode: oc}, _cpu)
+        when oc == @cli or oc == @clv or oc == @nop or oc == @xce,
+        do: 2
+
+    def total_cycles(%{opcode: oc}, _cpu) when oc == @rep or oc == @sep or oc == @xba, do: 3
 
     def execute(%{opcode: @clc}, cpu), do: cpu |> Cpu.carry_flag(false)
     def execute(%{opcode: @sec}, cpu), do: cpu |> Cpu.carry_flag(true)
@@ -204,25 +198,25 @@ defmodule Sneex.Ops.ProcessorStatus do
       |> Cpu.index_size(:bit8)
     end
 
-    def disasm(%{opcode: @clc}, _memory, _address), do: "CLC"
-    def disasm(%{opcode: @sec}, _memory, _address), do: "SEC"
-    def disasm(%{opcode: @cld}, _memory, _address), do: "CLD"
-    def disasm(%{opcode: @sed}, _memory, _address), do: "SED"
-    def disasm(%{opcode: @sei}, _memory, _address), do: "SEI"
-    def disasm(%{opcode: @cli}, _memory, _address), do: "CLI"
-    def disasm(%{opcode: @clv}, _memory, _address), do: "CLV"
-    def disasm(%{opcode: @nop}, _memory, _address), do: "NOP"
-    def disasm(%{opcode: @xba}, _memory, _address), do: "XBA"
-    def disasm(%{opcode: @xce}, _memory, _address), do: "XCE"
+    def disasm(%{opcode: @clc}, _cpu), do: "CLC"
+    def disasm(%{opcode: @sec}, _cpu), do: "SEC"
+    def disasm(%{opcode: @cld}, _cpu), do: "CLD"
+    def disasm(%{opcode: @sed}, _cpu), do: "SED"
+    def disasm(%{opcode: @sei}, _cpu), do: "SEI"
+    def disasm(%{opcode: @cli}, _cpu), do: "CLI"
+    def disasm(%{opcode: @clv}, _cpu), do: "CLV"
+    def disasm(%{opcode: @nop}, _cpu), do: "NOP"
+    def disasm(%{opcode: @xba}, _cpu), do: "XBA"
+    def disasm(%{opcode: @xce}, _cpu), do: "XCE"
 
-    def disasm(%{opcode: @rep}, memory, address) do
-      status_bits = Memory.read_byte(memory, address + 1)
-      "REP ##{BasicTypes.format_byte(status_bits)}"
+    def disasm(%{opcode: @rep}, cpu) do
+      status_bits = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
+      "REP ##{status_bits}"
     end
 
-    def disasm(%{opcode: @sep}, memory, address) do
-      status_bits = Memory.read_byte(memory, address + 1)
-      "SEP ##{BasicTypes.format_byte(status_bits)}"
+    def disasm(%{opcode: @sep}, cpu) do
+      status_bits = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
+      "SEP ##{status_bits}"
     end
   end
 end

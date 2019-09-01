@@ -4,7 +4,7 @@ defmodule Sneex.Ops.Increment do
   """
   defstruct [:opcode]
 
-  alias Sneex.{AddressMode, BasicTypes, Cpu, Memory}
+  alias Sneex.{AddressMode, BasicTypes, Cpu}
 
   @opaque t :: %__MODULE__{opcode: 0x1A | 0xEE | 0xE6 | 0xFE | 0xF6 | 0xE8 | 0xC8}
 
@@ -21,13 +21,13 @@ defmodule Sneex.Ops.Increment do
   def new(_opcode), do: nil
 
   defimpl Sneex.Ops.Opcode do
-    def byte_size(%{opcode: 0x1A}), do: 1
-    def byte_size(%{opcode: 0xEE}), do: 3
-    def byte_size(%{opcode: 0xE6}), do: 2
-    def byte_size(%{opcode: 0xFE}), do: 3
-    def byte_size(%{opcode: 0xF6}), do: 2
-    def byte_size(%{opcode: 0xE8}), do: 1
-    def byte_size(%{opcode: 0xC8}), do: 1
+    def byte_size(%{opcode: 0x1A}, _cpu), do: 1
+    def byte_size(%{opcode: 0xEE}, _cpu), do: 3
+    def byte_size(%{opcode: 0xE6}, _cpu), do: 2
+    def byte_size(%{opcode: 0xFE}, _cpu), do: 3
+    def byte_size(%{opcode: 0xF6}, _cpu), do: 2
+    def byte_size(%{opcode: 0xE8}, _cpu), do: 1
+    def byte_size(%{opcode: 0xC8}, _cpu), do: 1
 
     def total_cycles(%{opcode: 0x1A}, _cpu), do: 2
 
@@ -124,30 +124,30 @@ defmodule Sneex.Ops.Increment do
     defp increment(value, :bit16) when value >= 0x7FFF, do: {value + 1, false, true}
     defp increment(value, :bit16) when value < 0x7FFF, do: {value + 1, false, false}
 
-    def disasm(%{opcode: 0x1A}, _memory, _address), do: "INC A"
+    def disasm(%{opcode: 0x1A}, _cpu), do: "INC A"
 
-    def disasm(%{opcode: 0xEE}, memory, address) do
-      addr = Memory.read_word(memory, address + 1)
-      "INC #{BasicTypes.format_word(addr)}"
+    def disasm(%{opcode: 0xEE}, cpu) do
+      data = cpu |> Cpu.read_operand(2) |> BasicTypes.format_word()
+      "INC #{data}"
     end
 
-    def disasm(%{opcode: 0xE6}, memory, address) do
-      dp = Memory.read_byte(memory, address + 1)
-      "INC #{BasicTypes.format_byte(dp)}"
+    def disasm(%{opcode: 0xE6}, cpu) do
+      dp = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
+      "INC #{dp}"
     end
 
-    def disasm(%{opcode: 0xFE}, memory, address) do
-      addr = Memory.read_word(memory, address + 1)
-      "INC #{BasicTypes.format_word(addr)},X"
+    def disasm(%{opcode: 0xFE}, cpu) do
+      data = cpu |> Cpu.read_operand(2) |> BasicTypes.format_word()
+      "INC #{data},X"
     end
 
-    def disasm(%{opcode: 0xF6}, memory, address) do
-      dp = Memory.read_byte(memory, address + 1)
-      "INC #{BasicTypes.format_byte(dp)},X"
+    def disasm(%{opcode: 0xF6}, cpu) do
+      dp = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
+      "INC #{dp},X"
     end
 
-    def disasm(%{opcode: 0xE8}, _memory, _address), do: "INX"
+    def disasm(%{opcode: 0xE8}, _cpu), do: "INX"
 
-    def disasm(%{opcode: 0xC8}, _memory, _address), do: "INY"
+    def disasm(%{opcode: 0xC8}, _cpu), do: "INY"
   end
 end

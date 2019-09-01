@@ -9,19 +9,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "clear carry bit (clc)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0x18)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0x18)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "CLC" == Opcode.disasm(opcode, cpu, memory)
+      assert "CLC" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.carry_flag(true)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -34,19 +32,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "set carry bit (sec)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0x38)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0x38)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "SEC" == Opcode.disasm(opcode, cpu, memory)
+      assert "SEC" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.carry_flag(false)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -59,19 +55,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "clear decimal mode (cld)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xD8)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xD8)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "CLD" == Opcode.disasm(opcode, cpu, memory)
+      assert "CLD" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.decimal_mode(true)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -84,19 +78,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "set decimal mode (sed)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xF8)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xF8)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "SED" == Opcode.disasm(opcode, cpu, memory)
+      assert "SED" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.decimal_mode(false)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -109,26 +101,19 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "reset status bits (rep)" do
     setup do
-      memory = <<0xC2, 0xFF, 0xC2, 0xAA, 0xC2, 0x00>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xC2)}
+      cpu = <<0xC2, 0xFF, 0xC2, 0xAA, 0xC2, 0x00>> |> Memory.new() |> Cpu.new() |> Cpu.pc(0x0000)
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xC2)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 3 == Opcode.total_cycles(opcode, cpu)
-      assert "REP #$FF" == Opcode.disasm(opcode, memory, 0x0000)
+      assert "REP #$FF" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3, emulation mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, emulation mode", %{cpu: cpu, opcode: opcode} do
       # Should clear all except acc_size & index_size
-      cpu =
-        cpu
-        |> Cpu.emu_mode(:emulation)
-        |> set_all_flags()
-        |> Cpu.pc(0x0000)
-        |> execute_opcode(opcode)
+      cpu = cpu |> Cpu.emu_mode(:emulation) |> set_all_flags() |> execute_opcode(opcode)
 
       assert false == Cpu.negative_flag(cpu)
       assert false == Cpu.overflow_flag(cpu)
@@ -162,7 +147,7 @@ defmodule Sneex.Ops.ProcessorStatusTest do
       assert true == Cpu.carry_flag(cpu)
     end
 
-    test "execute/3, native mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, native mode", %{cpu: cpu, opcode: opcode} do
       # Should clear all
       cpu =
         cpu
@@ -206,26 +191,20 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "set status bits (sep)" do
     setup do
-      memory = <<0xE2, 0xFF, 0xE2, 0xAA, 0xE2, 0x00>> |> Memory.new()
-      cpu = Cpu.new(memory)
+      cpu = <<0xE2, 0xFF, 0xE2, 0xAA, 0xE2, 0x00>> |> Memory.new() |> Cpu.new() |> Cpu.pc(0x0000)
 
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xE2)}
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xE2)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 3 == Opcode.total_cycles(opcode, cpu)
-      assert "SEP #$FF" == Opcode.disasm(opcode, memory, 0x0000)
+      assert "SEP #$FF" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3, emulation mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, emulation mode", %{cpu: cpu, opcode: opcode} do
       # Should clear all except acc_size & index_size
-      cpu =
-        cpu
-        |> Cpu.emu_mode(:emulation)
-        |> clear_all_flags()
-        |> Cpu.pc(0x0000)
-        |> execute_opcode(opcode)
+      cpu = cpu |> Cpu.emu_mode(:emulation) |> clear_all_flags() |> execute_opcode(opcode)
 
       assert true == Cpu.negative_flag(cpu)
       assert true == Cpu.overflow_flag(cpu)
@@ -259,7 +238,7 @@ defmodule Sneex.Ops.ProcessorStatusTest do
       assert false == Cpu.carry_flag(cpu)
     end
 
-    test "execute/3, native mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, native mode", %{cpu: cpu, opcode: opcode} do
       # Should set all
       cpu =
         cpu
@@ -303,19 +282,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "clear interrupt disable flag (cli)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0x58)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0x58)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "CLI" == Opcode.disasm(opcode, cpu, memory)
+      assert "CLI" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.irq_disable(true)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -328,19 +305,18 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "set interrupt disable flag (sei)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
+      cpu = <<>> |> Memory.new() |> Cpu.new()
 
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0x78)}
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0x78)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "SEI" == Opcode.disasm(opcode, cpu, memory)
+      assert "SEI" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.irq_disable(false)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -353,19 +329,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "clear overflow flag (clv)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xB8)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xB8)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "CLV" == Opcode.disasm(opcode, cpu, memory)
+      assert "CLV" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.overflow_flag(true)
 
       cpu = cpu |> execute_opcode(opcode)
@@ -378,38 +352,34 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "no operation (nop)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xEA)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xEA)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "NOP" == Opcode.disasm(opcode, cpu, memory)
+      assert "NOP" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       assert cpu == execute_opcode(cpu, opcode)
     end
   end
 
   describe "exchange the B and A accumulators (xba)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xEB)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xEB)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 3 == Opcode.total_cycles(opcode, cpu)
-      assert "XBA" == Opcode.disasm(opcode, cpu, memory)
+      assert "XBA" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16) |> Cpu.acc(0x0000)
       cpu = cpu |> Cpu.negative_flag(true) |> Cpu.zero_flag(false)
 
@@ -432,19 +402,17 @@ defmodule Sneex.Ops.ProcessorStatusTest do
 
   describe "exchange carry and emulation bits (xce)" do
     setup do
-      memory = <<>> |> Memory.new()
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: ProcessorStatus.new(0xFB)}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: ProcessorStatus.new(0xFB)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "XCE" == Opcode.disasm(opcode, cpu, memory)
+      assert "XCE" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       cpu =
         cpu
         |> Cpu.emu_mode(:emulation)

@@ -10,20 +10,17 @@ defmodule Sneex.Ops.IncrementTest do
 
   describe "accumulator addressing mode" do
     setup do
-      data = <<0x00, 0x00, 0x00, 0x00>>
-      memory = Memory.new(data)
-      cpu = Cpu.new(memory)
-
-      {:ok, cpu: cpu, memory: memory, opcode: Increment.new(0x1A)}
+      cpu = <<0x00, 0x00, 0x00, 0x00>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: Increment.new(0x1A)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "INC A" == Opcode.disasm(opcode, cpu, memory)
+      assert "INC A" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3 with 16-bit mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2 with 16-bit mode", %{cpu: cpu, opcode: opcode} do
       cpu = cpu |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
 
       # 0x0000 -> 0x0001
@@ -57,7 +54,7 @@ defmodule Sneex.Ops.IncrementTest do
       assert false == Cpu.negative_flag(cpu)
     end
 
-    test "execute/3 with 8-bit mode", %{cpu: cpu, opcode: opcode} do
+    test "execute/2 with 8-bit mode", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> execute_opcode(opcode)
       assert 0x01 == Cpu.acc(cpu)
@@ -92,27 +89,25 @@ defmodule Sneex.Ops.IncrementTest do
       page = data_to_inc <> commands <> rest_of_page
       data = page <> page
 
-      memory = Memory.new(data)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit8)
-      opcode = Increment.new(0xEE)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu = data |> Memory.new() |> Cpu.new() |> Cpu.acc_size(:bit8)
+      {:ok, cpu: cpu, opcode: Increment.new(0xEE)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+    test "basic data", %{cpu: cpu, opcode: opcode} do
       # direct page == 0
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.pc(0x0004)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 6 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0000" == Opcode.disasm(opcode, memory, 0x0004)
+      assert "INC $0000" == Opcode.disasm(opcode, cpu)
 
       # direct page != 0
-      cpu = Cpu.data_bank(cpu, 0x01)
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.data_bank(0x01) |> Cpu.pc(0x000D)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 6 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0003" == Opcode.disasm(opcode, memory, 0x000D)
+      assert "INC $0003" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.pc(0x0004) |> execute_opcode(opcode)
       assert false == Cpu.zero_flag(cpu)
@@ -146,27 +141,25 @@ defmodule Sneex.Ops.IncrementTest do
       page = data_to_inc <> commands <> rest_of_page
       data = page <> page
 
-      memory = Memory.new(data)
-      cpu = memory |> Cpu.new() |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
-      opcode = Increment.new(0xEE)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu = data |> Memory.new() |> Cpu.new() |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
+      {:ok, cpu: cpu, opcode: Increment.new(0xEE)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
+    test "basic data", %{cpu: cpu, opcode: opcode} do
       # direct page == 0
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.pc(0x000B)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 8 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0002" == Opcode.disasm(opcode, memory, 0x000B)
+      assert "INC $0002" == Opcode.disasm(opcode, cpu)
 
       # direct page != 0
-      cpu = Cpu.data_bank(cpu, 0x01)
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.data_bank(0x01) |> Cpu.pc(0x000E)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 8 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0004" == Opcode.disasm(opcode, memory, 0x000E)
+      assert "INC $0004" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
       cpu = cpu |> Cpu.pc(0x0008) |> execute_opcode(opcode)
       assert false == Cpu.zero_flag(cpu)
@@ -197,25 +190,23 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x01, 0x7F, 0xFF>>
       commands = <<0xEE, 0x00, 0xEE, 0x01, 0xEE, 0x02, 0xEE, 0x03>>
 
-      memory = Memory.new(data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit8)
-      opcode = Increment.new(0xE6)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu = (data_to_inc <> commands) |> Memory.new() |> Cpu.new() |> Cpu.acc_size(:bit8)
+      {:ok, cpu: cpu, opcode: Increment.new(0xE6)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0004)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 5 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $00" == Opcode.disasm(opcode, memory, 0x0004)
+      assert "INC $00" == Opcode.disasm(opcode, cpu)
 
-      cpu = Cpu.direct_page(cpu, 0x01)
-      assert 2 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.direct_page(0x01) |> Cpu.pc(0x000A)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 6 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $03" == Opcode.disasm(opcode, memory, 0x000A)
+      assert "INC $03" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.pc(0x0004) |> execute_opcode(opcode)
       assert false == Cpu.negative_flag(cpu)
@@ -246,24 +237,29 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x00, 0x01, 0x00, 0xFF, 0x7F, 0xFF, 0xFF>>
       commands = <<0xE6, 0x00, 0xE6, 0x02, 0xE6, 0x04, 0xE6, 0x06>>
 
-      memory = Memory.new(data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.emu_mode(:native) |> Cpu.acc_size(:bit16)
-      opcode = Increment.new(0xE6)
+      cpu =
+        (data_to_inc <> commands)
+        |> Memory.new()
+        |> Cpu.new()
+        |> Cpu.emu_mode(:native)
+        |> Cpu.acc_size(:bit16)
 
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      {:ok, cpu: cpu, opcode: Increment.new(0xE6)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0008)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 7 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $00" == Opcode.disasm(opcode, memory, 0x0008)
+      assert "INC $00" == Opcode.disasm(opcode, cpu)
 
-      assert 2 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.pc(0x000E)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 7 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $06" == Opcode.disasm(opcode, memory, 0x000E)
+      assert "INC $06" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.pc(0x0008) |> execute_opcode(opcode)
       assert false == Cpu.negative_flag(cpu)
@@ -295,24 +291,29 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x01, 0x7F, 0xFF>>
       commands = <<0xFE, 0x00, 0x00, 0xFE, 0x01, 0x00, 0xFE, 0x02, 0x00, 0xFE, 0x03, 0x00>>
 
-      memory = Sneex.Memory.new(buffer <> buffer <> data_to_inc <> commands)
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(:bit8) |> Cpu.x(0x0010)
-      opcode = Increment.new(0xFE)
+      cpu =
+        (buffer <> buffer <> data_to_inc <> commands)
+        |> Sneex.Memory.new()
+        |> Cpu.new()
+        |> Cpu.acc_size(:bit8)
+        |> Cpu.x(0x0010)
 
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      {:ok, cpu: cpu, opcode: Increment.new(0xFE)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 3 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0014)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 7 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0000,X" == Opcode.disasm(opcode, memory, 0x0014)
+      assert "INC $0000,X" == Opcode.disasm(opcode, cpu)
 
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.pc(0x001A)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 7 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0002,X" == Opcode.disasm(opcode, memory, 0x001A)
+      assert "INC $0002,X" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.pc(0x0014) |> execute_opcode(opcode)
       assert false == Cpu.negative_flag(cpu)
@@ -344,32 +345,31 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x00, 0x01, 0x00, 0xFF, 0x7F, 0xFF, 0xFF>>
       commands = <<0xFE, 0x00, 0x00, 0xFE, 0x02, 0x00, 0xFE, 0x04, 0x00, 0xFE, 0x06, 0x00>>
 
-      memory = Sneex.Memory.new(buffer <> buffer <> data_to_inc <> commands)
-
       cpu =
-        memory
+        (buffer <> buffer <> data_to_inc <> commands)
+        |> Sneex.Memory.new()
         |> Cpu.new()
         |> Cpu.emu_mode(:native)
         |> Cpu.acc_size(:bit16)
         |> Cpu.index_size(:bit16)
         |> Cpu.x(0x0010)
 
-      opcode = Increment.new(0xFE)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      {:ok, cpu: cpu, opcode: Increment.new(0xFE)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 3 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0018)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 9 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0000,X" == Opcode.disasm(opcode, memory, 0x0018)
+      assert "INC $0000,X" == Opcode.disasm(opcode, cpu)
 
-      assert 3 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.pc(0x0021)
+      assert 3 == Opcode.byte_size(opcode, cpu)
       assert 9 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $0006,X" == Opcode.disasm(opcode, memory, 0x0021)
+      assert "INC $0006,X" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
       cpu = cpu |> Cpu.pc(0x0018) |> execute_opcode(opcode)
       assert false == Cpu.negative_flag(cpu)
@@ -401,26 +401,32 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x01, 0x7F, 0xFF>>
       commands = <<0xFE, 0x00, 0x00, 0xFE, 0x01, 0x00, 0xFE, 0x02, 0x00, 0xFE, 0x03, 0x00>>
 
-      memory = Memory.new(buffer <> buffer <> data_to_inc <> commands)
       size = :bit8
-      cpu = memory |> Cpu.new() |> Cpu.acc_size(size) |> Cpu.index_size(size) |> Cpu.x(0x0010)
-      opcode = Increment.new(0xF6)
 
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu =
+        (buffer <> buffer <> data_to_inc <> commands)
+        |> Memory.new()
+        |> Cpu.new()
+        |> Cpu.acc_size(size)
+        |> Cpu.index_size(size)
+        |> Cpu.x(0x0010)
+
+      {:ok, cpu: cpu, opcode: Increment.new(0xF6)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0014)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 6 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $00,X" == Opcode.disasm(opcode, memory, 0x0014)
+      assert "INC $00,X" == Opcode.disasm(opcode, cpu)
 
-      cpu = Cpu.direct_page(cpu, 0x01)
-      assert 2 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.direct_page(0x01) |> Cpu.pc(0x001A)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 7 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $02,X" == Opcode.disasm(opcode, memory, 0x001A)
+      assert "INC $02,X" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.pc(0x0014) |> execute_opcode(opcode)
       assert false == Cpu.negative_flag(cpu)
@@ -452,33 +458,31 @@ defmodule Sneex.Ops.IncrementTest do
       data_to_inc = <<0x00, 0x00, 0x01, 0x00, 0xFF, 0x7F, 0xFF, 0xFF>>
       commands = <<0xF6, 0x00, 0xF6, 0x02, 0xF6, 0x04, 0xF6, 0x06>>
 
-      memory = Memory.new(buffer <> buffer <> data_to_inc <> commands)
-
       cpu =
-        memory
+        (buffer <> buffer <> data_to_inc <> commands)
+        |> Memory.new()
         |> Cpu.new()
         |> Cpu.emu_mode(:native)
         |> Cpu.index_size(:bit8)
         |> Cpu.acc_size(:bit16)
         |> Cpu.x(0x10)
 
-      opcode = Increment.new(0xF6)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      {:ok, cpu: cpu, opcode: Increment.new(0xF6)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 2 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      cpu = cpu |> Cpu.pc(0x0018)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 8 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $00,X" == Opcode.disasm(opcode, memory, 0x0018)
+      assert "INC $00,X" == Opcode.disasm(opcode, cpu)
 
-      cpu = Cpu.direct_page(cpu, 0x01)
-      assert 2 == Opcode.byte_size(opcode)
+      cpu = cpu |> Cpu.direct_page(0x01) |> Cpu.pc(0x001E)
+      assert 2 == Opcode.byte_size(opcode, cpu)
       assert 9 == Opcode.total_cycles(opcode, cpu)
-      assert "INC $06,X" == Opcode.disasm(opcode, memory, 0x001E)
+      assert "INC $06,X" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3", %{cpu: cpu, opcode: opcode} do
+    test "execute/2", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
       cpu = cpu |> Cpu.pc(0x0018) |> execute_opcode(opcode)
       assert false == Cpu.zero_flag(cpu)
@@ -506,20 +510,17 @@ defmodule Sneex.Ops.IncrementTest do
 
   describe "increment x" do
     setup do
-      memory = Memory.new(<<>>)
-      cpu = memory |> Cpu.new()
-      opcode = Increment.new(0xE8)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: Increment.new(0xE8)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "INX" == Opcode.disasm(opcode, memory, 0x0018)
+      assert "INX" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3, 8-bit", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, 8-bit", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.index_size(:bit8) |> Cpu.x(0x0000) |> execute_opcode(opcode)
       assert false == Cpu.zero_flag(cpu)
@@ -545,7 +546,7 @@ defmodule Sneex.Ops.IncrementTest do
       assert 0x0000 == Cpu.x(cpu)
     end
 
-    test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, 16-bit", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
       cpu =
         cpu
@@ -580,20 +581,17 @@ defmodule Sneex.Ops.IncrementTest do
 
   describe "increment y" do
     setup do
-      memory = Memory.new(<<>>)
-      cpu = memory |> Cpu.new()
-      opcode = Increment.new(0xC8)
-
-      {:ok, cpu: cpu, memory: memory, opcode: opcode}
+      cpu = <<>> |> Memory.new() |> Cpu.new()
+      {:ok, cpu: cpu, opcode: Increment.new(0xC8)}
     end
 
-    test "basic data", %{cpu: cpu, memory: memory, opcode: opcode} do
-      assert 1 == Opcode.byte_size(opcode)
+    test "basic data", %{cpu: cpu, opcode: opcode} do
+      assert 1 == Opcode.byte_size(opcode, cpu)
       assert 2 == Opcode.total_cycles(opcode, cpu)
-      assert "INY" == Opcode.disasm(opcode, memory, 0x0018)
+      assert "INY" == Opcode.disasm(opcode, cpu)
     end
 
-    test "execute/3, 8-bit", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, 8-bit", %{cpu: cpu, opcode: opcode} do
       # 0x00 -> 0x01
       cpu = cpu |> Cpu.index_size(:bit8) |> Cpu.y(0x0000) |> execute_opcode(opcode)
       assert false == Cpu.zero_flag(cpu)
@@ -619,7 +617,7 @@ defmodule Sneex.Ops.IncrementTest do
       assert 0x0000 == Cpu.y(cpu)
     end
 
-    test "execute/3, 16-bit", %{cpu: cpu, opcode: opcode} do
+    test "execute/2, 16-bit", %{cpu: cpu, opcode: opcode} do
       # 0x0000 -> 0x0001
       cpu =
         cpu
