@@ -4,6 +4,7 @@ defmodule Sneex.Ops.Decrement do
   """
   defstruct [:opcode]
 
+  alias Sneex.Address.{Absolute, Mode}
   alias Sneex.{AddressMode, BasicTypes, Cpu}
 
   @opaque t :: %__MODULE__{opcode: 0x3A | 0xCE | 0xC6 | 0xDE | 0xD6 | 0xCA | 0x88}
@@ -69,8 +70,7 @@ defmodule Sneex.Ops.Decrement do
     end
 
     def execute(%{opcode: 0xCE}, cpu) do
-      operand = Cpu.read_operand(cpu, 2)
-      cpu |> AddressMode.absolute(true, operand) |> decrement_from_address(cpu)
+      cpu |> Absolute.new(true) |> Mode.address() |> decrement_from_address(cpu)
     end
 
     def execute(%{opcode: 0xC6}, cpu) do
@@ -79,8 +79,7 @@ defmodule Sneex.Ops.Decrement do
     end
 
     def execute(%{opcode: 0xDE}, cpu) do
-      operand = Cpu.read_operand(cpu, 2)
-      cpu |> AddressMode.absolute_indexed_x(operand) |> decrement_from_address(cpu)
+      cpu |> AddressMode.absolute_indexed_x() |> decrement_from_address(cpu)
     end
 
     def execute(%{opcode: 0xD6}, cpu) do

@@ -5,6 +5,7 @@ defmodule Sneex.Ops.And do
   defstruct [:opcode]
 
   use Bitwise
+  alias Sneex.Address.{Absolute, Mode}
   alias Sneex.{AddressMode, BasicTypes, Cpu}
 
   @opaque t :: %__MODULE__{opcode: valid_code1() | valid_code2()}
@@ -134,8 +135,7 @@ defmodule Sneex.Ops.And do
     end
 
     def execute(%{opcode: @absolute}, cpu) do
-      operand = cpu |> Cpu.read_operand(2)
-      addr = cpu |> AddressMode.absolute(true, operand)
+      addr = cpu |> Absolute.new(true) |> Mode.address()
       cpu |> Cpu.acc_size() |> load_data(cpu, addr) |> process_and(cpu)
     end
 
@@ -161,8 +161,7 @@ defmodule Sneex.Ops.And do
     end
 
     def execute(%{opcode: @absolute_indexed_x}, cpu) do
-      operand = cpu |> Cpu.read_operand(2)
-      addr = cpu |> AddressMode.absolute_indexed_x(operand)
+      addr = cpu |> AddressMode.absolute_indexed_x()
       cpu |> Cpu.acc_size() |> load_data(cpu, addr) |> process_and(cpu)
     end
 
@@ -172,8 +171,7 @@ defmodule Sneex.Ops.And do
     end
 
     def execute(%{opcode: @absolute_indexed_y}, cpu) do
-      operand = cpu |> Cpu.read_operand(2)
-      addr = cpu |> AddressMode.absolute_indexed_y(operand)
+      addr = cpu |> AddressMode.absolute_indexed_y()
       cpu |> Cpu.acc_size() |> load_data(cpu, addr) |> process_and(cpu)
     end
 
