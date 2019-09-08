@@ -19,19 +19,19 @@ defmodule Sneex.Address.DirectPageTest do
     test "direct_page of 0x0000", %{cpu: cpu} do
       cpu = cpu |> Cpu.direct_page(0x0000)
 
-      cpu |> Cpu.pc(0x0000) |> assert_behavior(0, 0, "$00")
-      cpu |> Cpu.pc(0x0001) |> assert_behavior(0, 0, "$55")
-      cpu |> Cpu.pc(0x0002) |> assert_behavior(0, 0, "$AA")
-      cpu |> Cpu.pc(0x0003) |> assert_behavior(0, 0, "$FF")
+      cpu |> Cpu.pc(0x0000) |> assert_behavior("$00")
+      cpu |> Cpu.pc(0x0001) |> assert_behavior("$55")
+      cpu |> Cpu.pc(0x0002) |> assert_behavior("$AA")
+      cpu |> Cpu.pc(0x0003) |> assert_behavior("$FF")
     end
 
     test "direct_page of 0x0001", %{cpu: cpu} do
       cpu = cpu |> Cpu.direct_page(0x0001)
 
-      cpu |> Cpu.pc(0x0000) |> assert_behavior(0, 1, "$00")
-      cpu |> Cpu.pc(0x0001) |> assert_behavior(0, 1, "$55")
-      cpu |> Cpu.pc(0x0002) |> assert_behavior(0, 1, "$AA")
-      cpu |> Cpu.pc(0x0003) |> assert_behavior(0, 1, "$FF")
+      cpu |> Cpu.pc(0x0000) |> assert_behavior("$00")
+      cpu |> Cpu.pc(0x0001) |> assert_behavior("$55")
+      cpu |> Cpu.pc(0x0002) |> assert_behavior("$AA")
+      cpu |> Cpu.pc(0x0003) |> assert_behavior("$FF")
     end
 
     test "fetch/2 and store/3", %{cpu: cpu} do
@@ -51,19 +51,19 @@ defmodule Sneex.Address.DirectPageTest do
     test "direct_page of 0x0000", %{cpu: cpu} do
       cpu = cpu |> Cpu.direct_page(0x0000)
 
-      cpu |> Cpu.pc(0x0000) |> assert_behavior(1, 1, "$00")
-      cpu |> Cpu.pc(0x0001) |> assert_behavior(1, 1, "$55")
-      cpu |> Cpu.pc(0x0002) |> assert_behavior(1, 1, "$AA")
-      cpu |> Cpu.pc(0x0003) |> assert_behavior(1, 1, "$FF")
+      cpu |> Cpu.pc(0x0000) |> assert_behavior("$00")
+      cpu |> Cpu.pc(0x0001) |> assert_behavior("$55")
+      cpu |> Cpu.pc(0x0002) |> assert_behavior("$AA")
+      cpu |> Cpu.pc(0x0003) |> assert_behavior("$FF")
     end
 
     test "direct_page of 0x0001", %{cpu: cpu} do
       cpu = cpu |> Cpu.direct_page(0x0001)
 
-      cpu |> Cpu.pc(0x0000) |> assert_behavior(1, 2, "$00")
-      cpu |> Cpu.pc(0x0001) |> assert_behavior(1, 2, "$55")
-      cpu |> Cpu.pc(0x0002) |> assert_behavior(1, 2, "$AA")
-      cpu |> Cpu.pc(0x0003) |> assert_behavior(1, 2, "$FF")
+      cpu |> Cpu.pc(0x0000) |> assert_behavior("$00")
+      cpu |> Cpu.pc(0x0001) |> assert_behavior("$55")
+      cpu |> Cpu.pc(0x0002) |> assert_behavior("$AA")
+      cpu |> Cpu.pc(0x0003) |> assert_behavior("$FF")
     end
 
     test "fetch/2 and store/3", %{cpu: cpu} do
@@ -76,11 +76,8 @@ defmodule Sneex.Address.DirectPageTest do
     end
   end
 
-  defp assert_behavior(cpu, fetch_cycles, store_cycles, disasm) do
+  defp assert_behavior(cpu, disasm) do
     mode = cpu |> DirectPage.new()
-
-    # assert fetch_cycles == Mode.fetch_cycles(mode)
-    # assert store_cycles == Mode.store_cycles(mode)
     assert disasm == Mode.disasm(mode, cpu)
   end
 end

@@ -91,7 +91,7 @@ defmodule Sneex.Ops.DecrementTest do
   end
 
   test "byte_size/2", %{cpu: cpu} do
-    op = %Decrement{address_mode: Static.new(0, 2, 8, 9, "BAR")}
+    op = %Decrement{address_mode: Static.new(0, 2, 9, "BAR")}
     assert 3 == Opcode.byte_size(op, cpu)
   end
 
@@ -106,7 +106,7 @@ defmodule Sneex.Ops.DecrementTest do
     with_override = %Decrement{disasm_override: "FOO"}
     assert "FOO" == Opcode.disasm(with_override, cpu)
 
-    without_override = %Decrement{address_mode: Static.new(0, 0, 0, 0, "BAR")}
+    without_override = %Decrement{address_mode: Static.new(0, 0, 0, "BAR")}
     assert "DEC BAR" == Opcode.disasm(without_override, cpu)
   end
 
@@ -158,7 +158,7 @@ defmodule Sneex.Ops.DecrementTest do
     end
   end
 
-  defp build_static_address_mode(base_value), do: Static.new(0, 2, 2, base_value, "test")
+  defp build_static_address_mode(base_value), do: Static.new(0, 2, base_value, "test")
 
   defp assert_decrement(opcode, cpu, value, zero_flag, negative_flag) do
     cpu = opcode |> Opcode.execute(cpu)

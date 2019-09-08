@@ -3,6 +3,9 @@ defmodule Sneex.Ops.ProcessorStatus do
   This represents the op codes for interacting with the processor status bits.
   This includes the following commands:
   CLC, SEC, CLD, SED, REP, SEP, SEI, CLI, CLV, NOP, XBA, and XCE
+
+  One thing to note about this opcode is that since it doesn't do a lot of memory addressing,
+  it has not (and may never?) be updated to make use of the new addressing mode fuctionality.
   """
   defstruct [:opcode]
 

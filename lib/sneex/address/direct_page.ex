@@ -2,28 +2,22 @@ defmodule Sneex.Address.DirectPage do
   @moduledoc """
   This module defines the behavior for accessing direct page memory.
   """
-  alias Sneex.Address.Helper
   alias Sneex.{BasicTypes, Cpu}
   use Bitwise
 
-  defstruct [:address, :fetch_cycles, :store_cycles]
+  defstruct [:address]
 
-  @type t :: %__MODULE__{address: BasicTypes.word(), fetch_cycles: 0 | 1, store_cycles: 0 | 1 | 2}
+  @type t :: %__MODULE__{address: BasicTypes.word()}
 
   @spec new(Sneex.Cpu.t()) :: __MODULE__.t()
   def new(cpu = %Cpu{}) do
     dp = cpu |> Cpu.direct_page()
     addr = cpu |> Cpu.read_operand(1) |> calc_addr(dp)
-    dp_cycles = dp |> band(0x00FF) |> check_for_dp_cycles()
-    size_cycles = cpu |> Cpu.acc_size() |> Helper.extra_cycle_for_16_bit()
 
-    %__MODULE__{address: addr, fetch_cycles: size_cycles, store_cycles: dp_cycles + size_cycles}
+    %__MODULE__{address: addr}
   end
 
   defp calc_addr(op, dp), do: (op + dp) |> band(0xFFFF)
-
-  defp check_for_dp_cycles(0), do: 0
-  defp check_for_dp_cycles(_), do: 1
 
   defimpl Sneex.Address.Mode do
     def address(%{address: addr}), do: addr
