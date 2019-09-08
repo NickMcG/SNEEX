@@ -25,11 +25,7 @@ defmodule Sneex.Address.Indexed do
 
     def byte_size(%{base_mode: mode}), do: Mode.byte_size(mode)
 
-    def fetch_cycles(%{base_mode: base}), do: Mode.fetch_cycles(base)
-
     def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
-
-    def store_cycles(%{base_mode: base}), do: Mode.store_cycles(base)
 
     def store(%{address: addr}, cpu, data), do: cpu |> Cpu.write_data(addr, data)
 

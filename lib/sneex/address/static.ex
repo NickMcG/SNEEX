@@ -20,11 +20,7 @@ defmodule Sneex.Address.Static do
 
     def byte_size(%{size: size}), do: size
 
-    def fetch_cycles(%{cycles: cycles}), do: cycles
-
     def fetch(%{data: data}, _cpu), do: data
-
-    def store_cycles(%{cycles: cycles}), do: cycles
 
     def store(_mode, cpu, data), do: cpu |> Cpu.acc(data)
 

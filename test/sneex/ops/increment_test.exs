@@ -1,135 +1,167 @@
 defmodule Sneex.Ops.IncrementTest do
   use ExUnit.Case
-  alias Sneex.Address.{Absolute, DirectPage, Indexed, Register, Static}
+  alias Sneex.Address.{Absolute, CycleCalculator, DirectPage, Indexed, Register, Static}
   alias Sneex.{Cpu, Memory}
   alias Sneex.Ops.{Increment, Opcode}
 
   setup do
-    cpu = <<0x00, 0x00, 0x00, 0x00>> |> Memory.new() |> Cpu.new() |> Cpu.emu_mode(:native)
+    cpu =
+      <<0x00, 0x00, 0x00, 0x00>>
+      |> Memory.new()
+      |> Cpu.new()
+      |> Cpu.emu_mode(:native)
+      |> Cpu.acc_size(:bit8)
+      |> Cpu.index_size(:bit16)
 
     {:ok, cpu: cpu}
   end
 
-  test "new/2 returns nil for unknown opcodes", %{cpu: cpu} do
-    assert nil == Increment.new(0x42, cpu)
+  test "new/1 returns nil for unknown opcodes", %{cpu: cpu} do
+    assert nil == Increment.new(cpu)
   end
 
   test "new/2 - accumulator addressing mode", %{cpu: cpu} do
     opcode = Increment.new(0x1A, cpu)
-    assert %Increment{address_mode: %Register{}} = opcode
-    assert_basic_data(opcode, cpu, 1, 2, "INC A")
+
+    assert %Increment{
+             disasm_overide: nil,
+             bit_size: :bit8,
+             address_mode: %Register{}
+           } = opcode
   end
 
   test "new/2 - absolute addressing mode", %{cpu: cpu} do
     opcode = Increment.new(0xEE, cpu)
-    assert %Increment{address_mode: %Absolute{}} = opcode
-    assert_basic_data(opcode, cpu, 3, 6, "INC $0000")
+
+    assert %Increment{
+             disasm_overide: nil,
+             bit_size: :bit8,
+             address_mode: %Absolute{}
+           } = opcode
   end
 
   test "new/2 - direct page addressing mode", %{cpu: cpu} do
     opcode = Increment.new(0xE6, cpu)
-    assert %Increment{address_mode: %DirectPage{}} = opcode
-    assert_basic_data(opcode, cpu, 2, 5, "INC $00")
+
+    assert %Increment{
+             disasm_overide: nil,
+             bit_size: :bit8,
+             address_mode: %DirectPage{}
+           } = opcode
   end
 
   test "new/2 - absolute x-indexed addressing mode", %{cpu: cpu} do
     opcode = Increment.new(0xFE, cpu)
-    assert %Increment{address_mode: %Indexed{}} = opcode
-    assert_basic_data(opcode, cpu, 3, 7, "INC $0000,X")
+
+    assert %Increment{
+             disasm_overide: nil,
+             bit_size: :bit8,
+             address_mode: %Indexed{}
+           } = opcode
   end
 
   test "new/2 - direct page x-indexed addressing mode", %{cpu: cpu} do
     opcode = Increment.new(0xF6, cpu)
-    assert %Increment{address_mode: %Indexed{}} = opcode
-    assert_basic_data(opcode, cpu, 2, 6, "INC $00,X")
+
+    assert %Increment{
+             disasm_overide: nil,
+             bit_size: :bit8,
+             address_mode: %Indexed{}
+           } = opcode
   end
 
   test "new/2 - increment x", %{cpu: cpu} do
     opcode = Increment.new(0xE8, cpu)
-    assert %Increment{address_mode: %Register{}} = opcode
-    assert_basic_data(opcode, cpu, 1, 2, "INX")
+
+    assert %Increment{
+             disasm_overide: "INX",
+             bit_size: :bit16,
+             address_mode: %Register{}
+           } = opcode
   end
 
   test "new/2 - increment y", %{cpu: cpu} do
     opcode = Increment.new(0xC8, cpu)
-    assert %Increment{address_mode: %Register{}} = opcode
-    assert_basic_data(opcode, cpu, 1, 2, "INY")
+
+    assert %Increment{
+             disasm_overide: "INY",
+             bit_size: :bit16,
+             address_mode: %Register{}
+           } = opcode
+  end
+
+  test "byte_size/2", %{cpu: cpu} do
+    op = %Increment{address_mode: Static.new(0, 2, 8, 0, "BAR")}
+    assert 3 == Opcode.byte_size(op, cpu)
+  end
+
+  test "total_cycles/2", %{cpu: cpu} do
+    ctor = &CycleCalculator.constant/1
+    opcode = %Increment{cycle_mods: [ctor.(1), ctor.(6)]}
+
+    assert 7 == Opcode.total_cycles(opcode, cpu)
+  end
+
+  test "disasm/2", %{cpu: cpu} do
+    with_override = %Increment{disasm_overide: "FOO"}
+    assert "FOO" == Opcode.disasm(with_override, cpu)
+
+    without_override = %Increment{address_mode: Static.new(0, 0, 0, 0, "BAR")}
+    assert "INC BAR" == Opcode.disasm(without_override, cpu)
   end
 
   describe "8-bit" do
-    setup %{cpu: cpu} do
-      cpu = cpu |> Cpu.acc_size(:bit8)
-      {:ok, cpu: cpu}
+    setup do
+      {:ok, opcode: %Increment{bit_size: :bit8}}
     end
 
-    test "increment - 0x00 -> 0x01", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0x00)
-      assert_increment(acc_opcode, cpu, 0x01, false, false)
-      assert_increment(index_opcode, cpu, 0x01, false, false)
+    test "increment - 0x00 -> 0x01", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0x00)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x01, false, false)
     end
 
-    test "increment - 0x7F -> 0x80", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0x7F)
-      assert_increment(acc_opcode, cpu, 0x80, false, true)
-      assert_increment(index_opcode, cpu, 0x80, false, true)
+    test "increment - 0x7F -> 0x80", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0x7F)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x80, false, true)
     end
 
-    test "increment - 0xFF -> 0x00", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0xFF)
-      assert_increment(acc_opcode, cpu, 0x00, true, false)
-      assert_increment(index_opcode, cpu, 0x00, true, false)
+    test "increment - 0xFF -> 0x00", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0xFF)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x00, true, false)
     end
   end
 
   describe "16-bit accumulator" do
     setup %{cpu: cpu} do
-      cpu = cpu |> Cpu.acc_size(:bit16) |> Cpu.index_size(:bit16)
-      {:ok, cpu: cpu}
+      {:ok, cpu: Cpu.acc_size(cpu, :bit16), opcode: %Increment{bit_size: :bit16}}
     end
 
-    test "increment - 0x0000 -> 0x0001", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0x0000)
-      assert_increment(acc_opcode, cpu, 0x0001, false, false)
-      assert_increment(index_opcode, cpu, 0x0001, false, false)
+    test "increment - 0x0000 -> 0x0001", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0x0000)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x0001, false, false)
     end
 
-    test "increment - 0x7FFF -> 0x8000", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0x7FFF)
-      assert_increment(acc_opcode, cpu, 0x8000, false, true)
-      assert_increment(index_opcode, cpu, 0x8000, false, true)
+    test "increment - 0x7FFF -> 0x8000", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0x7FFF)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x8000, false, true)
     end
 
-    test "increment - 0xFFFF -> 0x0000", %{cpu: cpu} do
-      {acc_opcode, index_opcode} = build_opcodes(cpu, 0xFFFF)
-      assert_increment(acc_opcode, cpu, 0x0000, true, false)
-      assert_increment(index_opcode, cpu, 0x0000, true, false)
+    test "increment - 0xFFFF -> 0x0000", %{cpu: cpu, opcode: opcode} do
+      mode = build_static_address_mode(0xFFFF)
+      opcode = %Increment{opcode | address_mode: mode}
+      assert_increment(opcode, cpu, 0x0000, true, false)
     end
   end
 
-  defp build_opcodes(cpu, base_value) do
-    mode = Static.new(0, 2, 2, base_value, "test")
-
-    acc_opcode = Increment.new(0x1A, cpu)
-    acc_opcode = %Increment{acc_opcode | address_mode: mode}
-
-    index_opcode = Increment.new(0xE8, cpu)
-    index_opcode = %Increment{index_opcode | address_mode: mode}
-
-    {acc_opcode, index_opcode}
-  end
-
-  defp execute_opcode(cpu, opcode) do
-    opcode |> Opcode.execute(cpu)
-  end
-
-  defp assert_basic_data(opcode, cpu, size, cycles, disasm) do
-    assert disasm == Opcode.disasm(opcode, cpu)
-    assert size == Opcode.byte_size(opcode, cpu)
-    assert cycles == Opcode.total_cycles(opcode, cpu)
-  end
+  defp build_static_address_mode(base_value), do: Static.new(0, 2, 2, base_value, "test")
 
   defp assert_increment(opcode, cpu, value, zero_flag, negative_flag) do
-    cpu = cpu |> execute_opcode(opcode)
+    cpu = opcode |> Opcode.execute(cpu)
 
     assert value == Cpu.acc(cpu)
     assert zero_flag == Cpu.zero_flag(cpu)

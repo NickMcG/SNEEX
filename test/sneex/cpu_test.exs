@@ -7,6 +7,20 @@ defmodule Sneex.CpuTest do
     {:ok, cpu: cpu}
   end
 
+  test "read_opcode/1", %{cpu: cpu} do
+    assert_opcode(cpu, 0x0000, 0x00)
+    assert_opcode(cpu, 0x0001, 0x01)
+    assert_opcode(cpu, 0x0002, 0x02)
+    assert_opcode(cpu, 0x0003, 0x03)
+    assert_opcode(cpu, 0x0004, 0x04)
+    assert_opcode(cpu, 0x0005, 0x05)
+  end
+
+  defp assert_opcode(cpu, pc, value) do
+    cpu = Sneex.Cpu.pc(cpu, pc)
+    assert value == Sneex.Cpu.read_opcode(cpu)
+  end
+
   test "read_operand/2", %{cpu: cpu} do
     assert 0x01 == Sneex.Cpu.read_operand(cpu, 1)
     assert 0x0201 == Sneex.Cpu.read_operand(cpu, 2)

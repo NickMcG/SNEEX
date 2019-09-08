@@ -29,11 +29,7 @@ defmodule Sneex.Address.Absolute do
 
     def byte_size(_mode), do: 2
 
-    def fetch_cycles(%{extra_cycles: cycles}), do: cycles
-
     def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
-
-    def store_cycles(%{extra_cycles: cycles}), do: cycles
 
     def store(%{address: addr}, cpu, data), do: cpu |> Cpu.write_data(addr, data)
 

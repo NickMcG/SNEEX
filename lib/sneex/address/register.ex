@@ -19,11 +19,7 @@ defmodule Sneex.Address.Register do
 
     def byte_size(_mode), do: 0
 
-    def fetch_cycles(_mode), do: 0
-
     def fetch(%{read: read}, cpu), do: cpu |> read.()
-
-    def store_cycles(_mode), do: 0
 
     def store(%{write: write}, cpu, data), do: cpu |> write.(data)
 

@@ -475,6 +475,13 @@ defmodule Sneex.Cpu do
   @spec memory(__MODULE__.t()) :: Sneex.Memory.t()
   def memory(%__MODULE__{memory: m}), do: m
 
+  @doc "Read the next opcode (where the program counter currently points)."
+  @spec read_opcode(__MODULE__.t()) :: byte()
+  def read_opcode(cpu = %__MODULE__{memory: m}) do
+    eff_pc = cpu |> effective_pc()
+    Sneex.Memory.read_byte(m, eff_pc)
+  end
+
   @doc "Read the 1, 2, or 3 byte operand that is 1 address past the program counter."
   @spec read_operand(__MODULE__.t(), 1 | 2 | 3) :: byte() | word() | long()
   def read_operand(cpu = %__MODULE__{memory: m}, 1) do
