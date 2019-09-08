@@ -24,7 +24,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0x1A, cpu)
 
     assert %Increment{
-             disasm_overide: nil,
+             disasm_override: nil,
              bit_size: :bit8,
              address_mode: %Register{}
            } = opcode
@@ -34,7 +34,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xEE, cpu)
 
     assert %Increment{
-             disasm_overide: nil,
+             disasm_override: nil,
              bit_size: :bit8,
              address_mode: %Absolute{}
            } = opcode
@@ -44,7 +44,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xE6, cpu)
 
     assert %Increment{
-             disasm_overide: nil,
+             disasm_override: nil,
              bit_size: :bit8,
              address_mode: %DirectPage{}
            } = opcode
@@ -54,7 +54,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xFE, cpu)
 
     assert %Increment{
-             disasm_overide: nil,
+             disasm_override: nil,
              bit_size: :bit8,
              address_mode: %Indexed{}
            } = opcode
@@ -64,7 +64,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xF6, cpu)
 
     assert %Increment{
-             disasm_overide: nil,
+             disasm_override: nil,
              bit_size: :bit8,
              address_mode: %Indexed{}
            } = opcode
@@ -74,7 +74,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xE8, cpu)
 
     assert %Increment{
-             disasm_overide: "INX",
+             disasm_override: "INX",
              bit_size: :bit16,
              address_mode: %Register{}
            } = opcode
@@ -84,7 +84,7 @@ defmodule Sneex.Ops.IncrementTest do
     opcode = Increment.new(0xC8, cpu)
 
     assert %Increment{
-             disasm_overide: "INY",
+             disasm_override: "INY",
              bit_size: :bit16,
              address_mode: %Register{}
            } = opcode
@@ -103,7 +103,7 @@ defmodule Sneex.Ops.IncrementTest do
   end
 
   test "disasm/2", %{cpu: cpu} do
-    with_override = %Increment{disasm_overide: "FOO"}
+    with_override = %Increment{disasm_override: "FOO"}
     assert "FOO" == Opcode.disasm(with_override, cpu)
 
     without_override = %Increment{address_mode: Static.new(0, 0, 0, 0, "BAR")}
@@ -134,7 +134,7 @@ defmodule Sneex.Ops.IncrementTest do
     end
   end
 
-  describe "16-bit accumulator" do
+  describe "16-bit" do
     setup %{cpu: cpu} do
       {:ok, cpu: Cpu.acc_size(cpu, :bit16), opcode: %Increment{bit_size: :bit16}}
     end

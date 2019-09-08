@@ -2,153 +2,133 @@ defmodule Sneex.Ops.Decrement do
   @moduledoc """
   This represents the op codes for decrementing a value (DEC, DEX, and DEY).
   """
-  defstruct [:opcode]
+  defstruct [:disasm_override, :bit_size, :cycle_mods, :address_mode]
 
-  alias Sneex.Address.{Absolute, Mode}
-  alias Sneex.{AddressMode, BasicTypes, Cpu}
+  alias Sneex.Address.{Absolute, CycleCalculator, DirectPage, Indexed, Mode, Register}
+  alias Sneex.{Cpu, CpuHelper}
+  use Bitwise
 
-  @opaque t :: %__MODULE__{opcode: 0x3A | 0xCE | 0xC6 | 0xDE | 0xD6 | 0xCA | 0x88}
+  @type t :: %__MODULE__{
+          disasm_override: nil | String.t(),
+          bit_size: :bit8 | :bit16,
+          cycle_mods: list(CycleCalculator.t()),
+          address_mode: any()
+        }
 
-  @spec new(byte()) :: nil | __MODULE__.t()
+  @spec new(Cpu.t() | byte()) :: nil | __MODULE__.t()
+  def new(cpu = %Cpu{}) do
+    cpu |> Cpu.read_opcode() |> new(cpu)
+  end
 
-  def new(0x3A), do: %__MODULE__{opcode: 0x3A}
-  def new(0xCE), do: %__MODULE__{opcode: 0xCE}
-  def new(0xC6), do: %__MODULE__{opcode: 0xC6}
-  def new(0xDE), do: %__MODULE__{opcode: 0xDE}
-  def new(0xD6), do: %__MODULE__{opcode: 0xD6}
-  def new(0xCA), do: %__MODULE__{opcode: 0xCA}
-  def new(0x88), do: %__MODULE__{opcode: 0x88}
+  @spec new(byte(), Cpu.t()) :: nil | __MODULE__.t()
 
-  def new(_opcode), do: nil
+  def new(0x3A, cpu) do
+    addr_mode = :acc |> Register.new()
+    bit_size = cpu |> Cpu.acc_size()
+    mods = [CycleCalculator.constant(2)]
+    %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
+  end
+
+  def new(0xCE, cpu) do
+    addr_mode = cpu |> Absolute.new(true)
+    bit_size = cpu |> Cpu.acc_size()
+    mods = [CycleCalculator.constant(6), CycleCalculator.acc_is_16_bit(2)]
+    %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
+  end
+
+  def new(0xC6, cpu) do
+    addr_mode = cpu |> DirectPage.new()
+    bit_size = cpu |> Cpu.acc_size()
+
+    mods = [
+      CycleCalculator.constant(5),
+      CycleCalculator.acc_is_16_bit(2),
+      CycleCalculator.low_direct_page_is_not_zero(1)
+    ]
+
+    %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
+  end
+
+  def new(0xDE, cpu) do
+    addr_mode = cpu |> Absolute.new(true) |> Indexed.new(cpu, :x)
+    bit_size = cpu |> Cpu.acc_size()
+    mods = [CycleCalculator.constant(7), CycleCalculator.acc_is_16_bit(2)]
+    %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
+  end
+
+  def new(0xD6, cpu) do
+    addr_mode = cpu |> DirectPage.new() |> Indexed.new(cpu, :x)
+    bit_size = cpu |> Cpu.acc_size()
+
+    mods = [
+      CycleCalculator.constant(6),
+      CycleCalculator.acc_is_16_bit(2),
+      CycleCalculator.low_direct_page_is_not_zero(1)
+    ]
+
+    %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
+  end
+
+  def new(0xCA, cpu) do
+    addr_mode = :x |> Register.new()
+    bit_size = cpu |> Cpu.index_size()
+    mods = [CycleCalculator.constant(2)]
+
+    %__MODULE__{
+      disasm_override: "DEX",
+      bit_size: bit_size,
+      cycle_mods: mods,
+      address_mode: addr_mode
+    }
+  end
+
+  def new(0x88, cpu) do
+    addr_mode = :y |> Register.new()
+    bit_size = cpu |> Cpu.index_size()
+    mods = [CycleCalculator.constant(2)]
+
+    %__MODULE__{
+      disasm_override: "DEY",
+      bit_size: bit_size,
+      cycle_mods: mods,
+      address_mode: addr_mode
+    }
+  end
+
+  def new(_opcode, _cpu), do: nil
 
   defimpl Sneex.Ops.Opcode do
-    def byte_size(%{opcode: 0x3A}, _cpu), do: 1
-    def byte_size(%{opcode: 0xCE}, _cpu), do: 3
-    def byte_size(%{opcode: 0xC6}, _cpu), do: 2
-    def byte_size(%{opcode: 0xDE}, _cpu), do: 3
-    def byte_size(%{opcode: 0xD6}, _cpu), do: 2
-    def byte_size(%{opcode: 0xCA}, _cpu), do: 1
-    def byte_size(%{opcode: 0x88}, _cpu), do: 1
+    def byte_size(%{address_mode: mode}, _cpu), do: 1 + Mode.byte_size(mode)
 
-    def total_cycles(%{opcode: 0x3A}, _cpu), do: 2
-
-    def total_cycles(%{opcode: 0xCE}, cpu) do
-      status_cycles = cpu |> Cpu.acc_size() |> add_16_bit_cycles()
-      6 + status_cycles
+    def total_cycles(%{cycle_mods: mods}, cpu) do
+      cpu |> CycleCalculator.calc_cycles(mods)
     end
 
-    def total_cycles(%{opcode: 0xC6}, cpu) do
-      status_cycles = cpu |> Cpu.acc_size() |> add_16_bit_cycles()
-      page_cycles = cpu |> Cpu.direct_page() |> add_direct_page_cycles()
-      5 + status_cycles + page_cycles
+    def execute(%{address_mode: mode, bit_size: bit_size}, cpu) do
+      {data, cpu} = mode |> Mode.fetch(cpu) |> decrement(bit_size, cpu)
+      mode |> Mode.store(cpu, data)
     end
 
-    def total_cycles(%{opcode: 0xDE}, cpu) do
-      status_cycles = cpu |> Cpu.acc_size() |> add_16_bit_cycles()
-      7 + status_cycles
-    end
-
-    def total_cycles(%{opcode: 0xD6}, cpu) do
-      status_cycles = cpu |> Cpu.acc_size() |> add_16_bit_cycles()
-      page_cycles = cpu |> Cpu.direct_page() |> add_direct_page_cycles()
-      6 + status_cycles + page_cycles
-    end
-
-    def total_cycles(%{opcode: 0xCA}, _cpu), do: 2
-
-    def total_cycles(%{opcode: 0x88}, _cpu), do: 2
-
-    defp add_16_bit_cycles(:bit8), do: 0
-    defp add_16_bit_cycles(_status), do: 2
-
-    defp add_direct_page_cycles(0x00), do: 0
-    defp add_direct_page_cycles(_), do: 1
-
-    def execute(%{opcode: 0x3A}, cpu) do
-      {new_a, cpu} = cpu |> Cpu.acc() |> decrement(cpu)
-      cpu |> Cpu.acc(new_a)
-    end
-
-    def execute(%{opcode: 0xCE}, cpu) do
-      cpu |> Absolute.new(true) |> Mode.address() |> decrement_from_address(cpu)
-    end
-
-    def execute(%{opcode: 0xC6}, cpu) do
-      operand = Cpu.read_operand(cpu, 1)
-      cpu |> AddressMode.direct_page(operand) |> decrement_from_address(cpu)
-    end
-
-    def execute(%{opcode: 0xDE}, cpu) do
-      cpu |> AddressMode.absolute_indexed_x() |> decrement_from_address(cpu)
-    end
-
-    def execute(%{opcode: 0xD6}, cpu) do
-      operand = Cpu.read_operand(cpu, 1)
-      cpu |> AddressMode.direct_page_indexed_x(operand) |> decrement_from_address(cpu)
-    end
-
-    def execute(%{opcode: 0xCA}, cpu) do
-      x = Cpu.x(cpu)
-      {new_x, cpu} = cpu |> Cpu.index_size() |> decrement(x, cpu)
-      cpu |> Cpu.x(new_x)
-    end
-
-    def execute(%{opcode: 0x88}, cpu) do
-      y = Cpu.y(cpu)
-      {new_y, cpu} = cpu |> Cpu.index_size() |> decrement(y, cpu)
-      cpu |> Cpu.y(new_y)
-    end
-
-    defp decrement_from_address(address, cpu = %Cpu{}) do
-      data = Cpu.read_data(cpu, address)
-      {new_value, cpu} = decrement(data, cpu)
-      Cpu.write_data(cpu, address, new_value)
-    end
-
-    defp decrement(bitness, value, cpu = %Cpu{}) do
-      {new_value, zf, nf} = decrement(value, bitness)
-
+    defp decrement(0, bit_size, cpu = %Cpu{}) do
+      new_value = bit_size |> determine_mask() |> band(0xFFFF)
+      %{negative: nf, zero: zf} = CpuHelper.check_flags_for_value(new_value, bit_size)
       new_cpu = cpu |> Cpu.zero_flag(zf) |> Cpu.negative_flag(nf)
       {new_value, new_cpu}
     end
 
-    defp decrement(value, cpu = %Cpu{}) do
-      cpu |> Cpu.acc_size() |> decrement(value, cpu)
+    defp decrement(value, bit_size, cpu = %Cpu{}) do
+      new_value = bit_size |> determine_mask() |> band(value - 1)
+      %{negative: nf, zero: zf} = CpuHelper.check_flags_for_value(new_value, bit_size)
+      new_cpu = cpu |> Cpu.zero_flag(zf) |> Cpu.negative_flag(nf)
+      {new_value, new_cpu}
     end
 
-    defp decrement(0x00, :bit8), do: {0xFF, false, true}
-    defp decrement(0x01, :bit8), do: {0x00, true, false}
-    defp decrement(value, :bit8) when value > 0x80, do: {value - 1, false, true}
-    defp decrement(value, :bit8) when value <= 0x80, do: {value - 1, false, false}
-    defp decrement(0x0000, :bit16), do: {0xFFFF, false, true}
-    defp decrement(0x0001, :bit16), do: {0x0000, true, false}
-    defp decrement(value, :bit16) when value > 0x8000, do: {value - 1, false, true}
-    defp decrement(value, :bit16) when value <= 0x8000, do: {value - 1, false, false}
+    defp determine_mask(:bit8), do: 0xFF
+    defp determine_mask(:bit16), do: 0xFFFF
 
-    def disasm(%{opcode: 0x3A}, _cpu), do: "DEC A"
+    def disasm(%{disasm_override: nil, address_mode: mode}, cpu),
+      do: "DEC #{Mode.disasm(mode, cpu)}"
 
-    def disasm(%{opcode: 0xCE}, cpu) do
-      addr = cpu |> Cpu.read_operand(2) |> BasicTypes.format_word()
-      "DEC #{addr}"
-    end
-
-    def disasm(%{opcode: 0xC6}, cpu) do
-      dp = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
-      "DEC #{dp}"
-    end
-
-    def disasm(%{opcode: 0xDE}, cpu) do
-      addr = cpu |> Cpu.read_operand(2) |> BasicTypes.format_word()
-      "DEC #{addr},X"
-    end
-
-    def disasm(%{opcode: 0xD6}, cpu) do
-      dp = cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
-      "DEC #{dp},X"
-    end
-
-    def disasm(%{opcode: 0xCA}, _cpu), do: "DEX"
-
-    def disasm(%{opcode: 0x88}, _cpu), do: "DEY"
+    def disasm(%{disasm_override: override}, _cpu), do: override
   end
 end

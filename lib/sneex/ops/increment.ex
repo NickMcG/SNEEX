@@ -2,14 +2,14 @@ defmodule Sneex.Ops.Increment do
   @moduledoc """
   This represents the op codes for incrementing a value (INC, INX, and INY).
   """
-  defstruct [:disasm_overide, :bit_size, :cycle_mods, :address_mode]
+  defstruct [:disasm_override, :bit_size, :cycle_mods, :address_mode]
 
   alias Sneex.Address.{Absolute, CycleCalculator, DirectPage, Indexed, Mode, Register}
   alias Sneex.{Cpu, CpuHelper}
   use Bitwise
 
   @type t :: %__MODULE__{
-          disasm_overide: nil | String.t(),
+          disasm_override: nil | String.t(),
           bit_size: :bit8 | :bit16,
           cycle_mods: list(CycleCalculator.t()),
           address_mode: any()
@@ -17,8 +17,7 @@ defmodule Sneex.Ops.Increment do
 
   @spec new(Cpu.t()) :: nil | __MODULE__.t()
   def new(cpu) do
-    opcode = cpu |> Cpu.read_opcode()
-    new(opcode, cpu)
+    cpu |> Cpu.read_opcode() |> new(cpu)
   end
 
   @spec new(byte(), Cpu.t()) :: nil | __MODULE__.t()
@@ -71,12 +70,12 @@ defmodule Sneex.Ops.Increment do
   end
 
   def new(0xE8, cpu) do
-    addr_mode = Register.new(:x)
+    addr_mode = :x |> Register.new()
     bit_size = cpu |> Cpu.index_size()
     mods = [CycleCalculator.constant(2)]
 
     %__MODULE__{
-      disasm_overide: "INX",
+      disasm_override: "INX",
       bit_size: bit_size,
       cycle_mods: mods,
       address_mode: addr_mode
@@ -84,12 +83,12 @@ defmodule Sneex.Ops.Increment do
   end
 
   def new(0xC8, cpu) do
-    addr_mode = Register.new(:y)
+    addr_mode = :y |> Register.new()
     bit_size = cpu |> Cpu.index_size()
     mods = [CycleCalculator.constant(2)]
 
     %__MODULE__{
-      disasm_overide: "INY",
+      disasm_override: "INY",
       bit_size: bit_size,
       cycle_mods: mods,
       address_mode: addr_mode
@@ -120,9 +119,9 @@ defmodule Sneex.Ops.Increment do
     defp determine_mask(:bit8), do: 0xFF
     defp determine_mask(:bit16), do: 0xFFFF
 
-    def disasm(%{disasm_overide: nil, address_mode: mode}, cpu),
+    def disasm(%{disasm_override: nil, address_mode: mode}, cpu),
       do: "INC #{Mode.disasm(mode, cpu)}"
 
-    def disasm(%{disasm_overide: override}, _cpu), do: override
+    def disasm(%{disasm_override: override}, _cpu), do: override
   end
 end
