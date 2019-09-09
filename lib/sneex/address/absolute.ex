@@ -2,17 +2,23 @@ defmodule Sneex.Address.Absolute do
   @moduledoc """
   This module defines the implementation for absolute addressing
   """
+  defstruct [:address, :is_long?]
+
   alias Sneex.{BasicTypes, Cpu}
   use Bitwise
-  defstruct [:address]
 
-  @type t :: %__MODULE__{address: BasicTypes.word()}
+  @type t :: %__MODULE__{address: BasicTypes.word(), is_long?: boolean()}
 
   @spec new(Cpu.t(), boolean()) :: __MODULE__.t()
   def new(cpu = %Cpu{}, is_data?) do
     addr = is_data? |> calc_addr(cpu)
 
-    %__MODULE__{address: addr}
+    %__MODULE__{address: addr, is_long?: false}
+  end
+
+  @spec new_long(Cpu.t()) :: __MODULE__.t()
+  def new_long(cpu = %Cpu{}) do
+    %__MODULE__{address: cpu |> Cpu.read_operand(3), is_long?: true}
   end
 
   defp calc_addr(_is_data? = true, cpu), do: cpu |> Cpu.data_bank() |> calc_addr(cpu)
@@ -32,8 +38,9 @@ defmodule Sneex.Address.Absolute do
 
     def store(%{address: addr}, cpu, data), do: cpu |> Cpu.write_data(addr, data)
 
-    def disasm(_mode, cpu) do
-      cpu |> Cpu.read_operand(2) |> BasicTypes.format_word()
-    end
+    def disasm(%{address: a, is_long?: false}, _cpu),
+      do: a |> band(0xFFFF) |> BasicTypes.format_word()
+
+    def disasm(%{address: a, is_long?: true}, _cpu), do: a |> BasicTypes.format_long()
   end
 end
