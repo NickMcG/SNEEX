@@ -15,9 +15,9 @@ defmodule Sneex.Address.Register do
   def new(:acc), do: %__MODULE__{read: &Cpu.acc/1, write: &Cpu.acc/2, register: "A"}
 
   defimpl Sneex.Address.Mode do
-    def address(_mode), do: 0x0000
+    def address(_mode, _cpu), do: 0x0000
 
-    def byte_size(_mode), do: 0
+    def byte_size(_mode, _cpu), do: 0
 
     def fetch(%{read: read}, cpu), do: cpu |> read.()
 

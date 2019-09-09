@@ -3,22 +3,12 @@ defmodule Sneex.AddressMode do
   This module contains the logic for converting an address offset into a full address
   using the current state of the CPU and the logic for each addressing mode.
   """
-  alias Sneex.Address.{Absolute, Helper, Mode}
+  alias Sneex.Address.Helper
   alias Sneex.{BasicTypes, Cpu}
   use Bitwise
 
   @typep word :: BasicTypes.word()
   @typep long :: BasicTypes.long()
-
-  @spec absolute_indexed_x(Cpu.t()) :: long()
-  def absolute_indexed_x(cpu = %Cpu{}) do
-    cpu |> Absolute.new(true) |> Mode.address() |> Helper.indexed(cpu, :x)
-  end
-
-  @spec absolute_indexed_y(Cpu.t()) :: long()
-  def absolute_indexed_y(cpu = %Cpu{}) do
-    cpu |> Absolute.new(true) |> Mode.address() |> Helper.indexed(cpu, :y)
-  end
 
   @spec absolute_indexed_indirect(Cpu.t()) :: long()
   def absolute_indexed_indirect(cpu = %Cpu{}) do

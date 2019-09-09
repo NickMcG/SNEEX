@@ -20,9 +20,9 @@ defmodule Sneex.Address.DirectPage do
   defp calc_addr(op, dp), do: (op + dp) |> band(0xFFFF)
 
   defimpl Sneex.Address.Mode do
-    def address(%{address: addr}), do: addr
+    def address(%{address: addr}, _cpu), do: addr
 
-    def byte_size(_mode), do: 1
+    def byte_size(_mode, _cpu), do: 1
 
     def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
 

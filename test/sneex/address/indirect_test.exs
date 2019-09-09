@@ -34,8 +34,8 @@ defmodule Sneex.Address.IndirectTest do
   end
 
   defp assert_behavior(mode, cpu, address) do
-    assert address == Mode.address(mode)
-    assert 2 == Mode.byte_size(mode)
+    assert address == Mode.address(mode, cpu)
+    assert 2 == Mode.byte_size(mode, cpu)
     assert_disasm(mode, cpu)
   end
 

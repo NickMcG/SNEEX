@@ -17,9 +17,9 @@ defmodule Sneex.Address.Immediate do
   defp calc_byte_size(:bit16), do: 2
 
   defimpl Sneex.Address.Mode do
-    def address(_mode), do: 0
+    def address(_mode, _cpu), do: 0
 
-    def byte_size(%{byte_size: size}), do: size
+    def byte_size(%{byte_size: size}, _cpu), do: size
 
     def fetch(%{byte_size: size}, cpu), do: cpu |> Cpu.read_operand(size)
 

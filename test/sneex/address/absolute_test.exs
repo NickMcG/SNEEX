@@ -38,7 +38,7 @@ defmodule Sneex.Address.AbsoluteTest do
     end
 
     test "fetch/2 and store/3", %{cpu: cpu} do
-      mode = cpu |> Absolute.new(false)
+      mode = Absolute.new(false)
 
       assert 0xFF == Mode.fetch(mode, cpu)
       <<0xAA, _rest::binary>> = mode |> Mode.store(cpu, 0xAA) |> Cpu.memory() |> Memory.raw_data()
@@ -66,7 +66,7 @@ defmodule Sneex.Address.AbsoluteTest do
     end
 
     test "fetch/2 and store/3", %{cpu: cpu} do
-      mode = cpu |> Absolute.new(false)
+      mode = Absolute.new(false)
 
       assert 0x00FF == Mode.fetch(mode, cpu)
 
@@ -83,14 +83,17 @@ defmodule Sneex.Address.AbsoluteTest do
   end
 
   defp assert_behavior(cpu, is_data?, address, disasm) do
-    mode = cpu |> Absolute.new(is_data?)
-    assert %Absolute{address: ^address, is_long?: false} = mode
+    mode = Absolute.new(is_data?)
+    assert_data(is_data?, mode)
     assert disasm == Mode.disasm(mode, cpu)
   end
 
+  defp assert_data(true, mode), do: assert(%Absolute{type: :data} = mode)
+  defp assert_data(false, mode), do: assert(%Absolute{type: :program} = mode)
+
   defp assert_long_behavior(cpu, address) do
-    mode = cpu |> Absolute.new_long()
-    assert %Absolute{address: ^address, is_long?: true} = mode
+    mode = Absolute.new_long()
+    assert %Absolute{type: :long} = mode
     assert BasicTypes.format_long(address) == Mode.disasm(mode, cpu)
   end
 end

@@ -16,9 +16,9 @@ defmodule Sneex.Address.Static do
   end
 
   defimpl Sneex.Address.Mode do
-    def address(%{address: addr}), do: addr
+    def address(%{address: addr}, _cpu), do: addr
 
-    def byte_size(%{size: size}), do: size
+    def byte_size(%{size: size}, _cpu), do: size
 
     def fetch(%{data: data}, _cpu), do: data
 

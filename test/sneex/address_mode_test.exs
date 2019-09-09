@@ -9,48 +9,6 @@ defmodule Sneex.AddressModeTest do
     {:ok, cpu: cpu}
   end
 
-  test "absolute_indexed_x/2", %{cpu: cpu} do
-    cpu = cpu |> Cpu.data_bank(0x00) |> Cpu.x(0x0000) |> Cpu.index_size(:bit16)
-
-    assert 0x000000 == AddressMode.absolute_indexed_x(cpu)
-    # assert 0x00DEAD == AddressMode.absolute_indexed_x(cpu, 0xDEAD)
-    # assert 0x00BEEF == AddressMode.absolute_indexed_x(cpu, 0xBEEF)
-    # assert 0x00FFFF == AddressMode.absolute_indexed_x(cpu, 0xFFFF)
-
-    # cpu = cpu |> Cpu.data_bank(0x01) |> Cpu.x(0x0142) |> Cpu.program_bank(0x01)
-    # assert 0x010142 == AddressMode.absolute_indexed_x(cpu, 0x0000)
-    # assert 0x01DFEF == AddressMode.absolute_indexed_x(cpu, 0xDEAD)
-    # assert 0x01C031 == AddressMode.absolute_indexed_x(cpu, 0xBEEF)
-    # assert 0x020141 == AddressMode.absolute_indexed_x(cpu, 0xFFFF)
-
-    # cpu = cpu |> Cpu.data_bank(0xFF) |> Cpu.index_size(:bit8)
-    # assert 0xFF0042 == AddressMode.absolute_indexed_x(cpu, 0x0000)
-    # assert 0xFFDEEF == AddressMode.absolute_indexed_x(cpu, 0xDEAD)
-    # assert 0xFFBF31 == AddressMode.absolute_indexed_x(cpu, 0xBEEF)
-    # assert 0x000041 == AddressMode.absolute_indexed_x(cpu, 0xFFFF)
-  end
-
-  test "absolute_indexed_y/2", %{cpu: cpu} do
-    cpu = cpu |> Cpu.data_bank(0x00) |> Cpu.y(0x0000) |> Cpu.index_size(:bit16)
-
-    assert 0x000000 == AddressMode.absolute_indexed_y(cpu)
-    # assert 0x00DEAD == AddressMode.absolute_indexed_y(cpu, 0xDEAD)
-    # assert 0x00BEEF == AddressMode.absolute_indexed_y(cpu, 0xBEEF)
-    # assert 0x00FFFF == AddressMode.absolute_indexed_y(cpu, 0xFFFF)
-
-    # cpu = cpu |> Cpu.data_bank(0x01) |> Cpu.y(0x0142) |> Cpu.program_bank(0x01)
-    # assert 0x010142 == AddressMode.absolute_indexed_y(cpu, 0x0000)
-    # assert 0x01DFEF == AddressMode.absolute_indexed_y(cpu, 0xDEAD)
-    # assert 0x01C031 == AddressMode.absolute_indexed_y(cpu, 0xBEEF)
-    # assert 0x020141 == AddressMode.absolute_indexed_y(cpu, 0xFFFF)
-
-    # cpu = cpu |> Cpu.data_bank(0xFF) |> Cpu.index_size(:bit8)
-    # assert 0xFF0042 == AddressMode.absolute_indexed_y(cpu, 0x0000)
-    # assert 0xFFDEEF == AddressMode.absolute_indexed_y(cpu, 0xDEAD)
-    # assert 0xFFBF31 == AddressMode.absolute_indexed_y(cpu, 0xBEEF)
-    # assert 0x000041 == AddressMode.absolute_indexed_y(cpu, 0xFFFF)
-  end
-
   test "absolute_indexed_indirect/1" do
     blank_bank = DataBuilder.build_block_of_00s(0x10000)
     data = blank_bank <> <<0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0xAA, 0xFF>>

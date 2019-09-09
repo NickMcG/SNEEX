@@ -17,13 +17,13 @@ defmodule Sneex.Address.Indirect do
 
   @spec new_long(any(), Cpu.t()) :: __MODULE__.t()
   def new_long(base, cpu = %Cpu{}) do
-    base_addr = base |> Mode.address()
+    base_addr = base |> Mode.address(cpu)
     addr = cpu |> Cpu.read_data(base_addr, 3)
     %__MODULE__{base_mode: base, address: addr, is_long?: true}
   end
 
   defp new(bank, base, cpu = %Cpu{}) do
-    base_addr = base |> Mode.address()
+    base_addr = base |> Mode.address(cpu)
     data = cpu |> Cpu.read_data(base_addr, 2)
     addr = bank |> calc_addr(data)
     %__MODULE__{base_mode: base, address: addr, is_long?: false}
@@ -32,9 +32,9 @@ defmodule Sneex.Address.Indirect do
   defp calc_addr(bank, addr), do: bank |> bsl(16) |> bor(addr) |> band(0xFFFFFF)
 
   defimpl Sneex.Address.Mode do
-    def address(%{address: addr}), do: addr
+    def address(%{address: addr}, _cpu), do: addr
 
-    def byte_size(%{base_mode: mode}), do: Mode.byte_size(mode)
+    def byte_size(%{base_mode: mode}, cpu), do: Mode.byte_size(mode, cpu)
 
     def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
 

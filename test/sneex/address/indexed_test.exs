@@ -36,10 +36,10 @@ defmodule Sneex.Address.IndexedTest do
     x_mode = static |> Indexed.new(cpu, :x)
     y_mode = static |> Indexed.new(cpu, :y)
 
-    assert addr + Cpu.x(cpu) == Mode.address(x_mode)
+    assert addr + Cpu.x(cpu) == Mode.address(x_mode, cpu)
     assert "#{disasm},X" == Mode.disasm(x_mode, cpu)
 
-    assert addr + Cpu.y(cpu) == Mode.address(y_mode)
+    assert addr + Cpu.y(cpu) == Mode.address(y_mode, cpu)
     assert "#{disasm},Y" == Mode.disasm(y_mode, cpu)
   end
 end

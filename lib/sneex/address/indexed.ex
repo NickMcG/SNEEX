@@ -13,7 +13,7 @@ defmodule Sneex.Address.Indexed do
 
   @spec new(any(), Sneex.Cpu.t(), index_registers()) :: __MODULE__.t()
   def new(base, cpu = %Cpu{}, register) do
-    address = base |> Mode.address() |> adjust_address(cpu, register)
+    address = base |> Mode.address(cpu) |> adjust_address(cpu, register)
     %__MODULE__{base_mode: base, address: address, register: register}
   end
 
@@ -21,9 +21,9 @@ defmodule Sneex.Address.Indexed do
   defp adjust_address(address, cpu, :y), do: address + Cpu.y(cpu)
 
   defimpl Sneex.Address.Mode do
-    def address(%{address: address}), do: address
+    def address(%{address: address}, _cpu), do: address
 
-    def byte_size(%{base_mode: mode}), do: Mode.byte_size(mode)
+    def byte_size(%{base_mode: mode}, cpu), do: Mode.byte_size(mode, cpu)
 
     def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
 
