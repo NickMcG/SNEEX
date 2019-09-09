@@ -20,8 +20,8 @@ defmodule Sneex.Address.IndexedTest do
 
   test "fetch/2 and store/3", %{cpu: cpu, static: static} do
     cpu = cpu |> Cpu.x(0x03) |> Cpu.y(0x04)
-    x_mode = static |> Indexed.new(cpu, :x)
-    y_mode = static |> Indexed.new(cpu, :y)
+    x_mode = static |> Indexed.new(:x)
+    y_mode = static |> Indexed.new(:y)
 
     assert 0x55 == Mode.fetch(x_mode, cpu)
     cpu = x_mode |> Mode.store(cpu, 0xDE)
@@ -33,8 +33,8 @@ defmodule Sneex.Address.IndexedTest do
   end
 
   defp assert_behavior(cpu, static = %{address: addr, disasm: disasm}) do
-    x_mode = static |> Indexed.new(cpu, :x)
-    y_mode = static |> Indexed.new(cpu, :y)
+    x_mode = static |> Indexed.new(:x)
+    y_mode = static |> Indexed.new(:y)
 
     assert addr + Cpu.x(cpu) == Mode.address(x_mode, cpu)
     assert "#{disasm},X" == Mode.disasm(x_mode, cpu)

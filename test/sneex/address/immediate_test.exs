@@ -27,7 +27,7 @@ defmodule Sneex.Address.ImmediateTest do
   end
 
   defp assert_behavior(cpu, size, data, disasm) do
-    mode = cpu |> Immediate.new()
+    mode = Immediate.new()
 
     assert 0 == Mode.address(mode, cpu)
     assert size == Mode.byte_size(mode, cpu)

@@ -5,31 +5,39 @@ defmodule Sneex.Address.DirectPage do
   alias Sneex.{BasicTypes, Cpu}
   use Bitwise
 
-  defstruct [:address]
+  defstruct []
 
-  @type t :: %__MODULE__{address: BasicTypes.word()}
+  @type t :: %__MODULE__{}
 
-  @spec new(Sneex.Cpu.t()) :: __MODULE__.t()
-  def new(cpu = %Cpu{}) do
-    dp = cpu |> Cpu.direct_page()
-    addr = cpu |> Cpu.read_operand(1) |> calc_addr(dp)
-
-    %__MODULE__{address: addr}
+  @spec new() :: __MODULE__.t()
+  def new do
+    %__MODULE__{}
   end
 
-  defp calc_addr(op, dp), do: (op + dp) |> band(0xFFFF)
-
   defimpl Sneex.Address.Mode do
-    def address(%{address: addr}, _cpu), do: addr
+    def address(_mode, cpu), do: cpu |> calc_addr()
 
     def byte_size(_mode, _cpu), do: 1
 
-    def fetch(%{address: addr}, cpu), do: cpu |> Cpu.read_data(addr)
+    def fetch(mode, cpu) do
+      addr = mode |> address(cpu)
+      cpu |> Cpu.read_data(addr)
+    end
 
-    def store(%{address: addr}, cpu, data), do: cpu |> Cpu.write_data(addr, data)
+    def store(mode, cpu, data) do
+      addr = mode |> address(cpu)
+      cpu |> Cpu.write_data(addr, data)
+    end
 
     def disasm(_mode, cpu) do
       cpu |> Cpu.read_operand(1) |> BasicTypes.format_byte()
+    end
+
+    defp calc_addr(cpu) do
+      dp = cpu |> Cpu.direct_page()
+      op = cpu |> Cpu.read_operand(1)
+
+      (op + dp) |> band(0xFFFF)
     end
   end
 end

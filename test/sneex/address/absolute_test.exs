@@ -85,6 +85,7 @@ defmodule Sneex.Address.AbsoluteTest do
   defp assert_behavior(cpu, is_data?, address, disasm) do
     mode = Absolute.new(is_data?)
     assert_data(is_data?, mode)
+    assert address == Mode.address(mode, cpu)
     assert disasm == Mode.disasm(mode, cpu)
   end
 
@@ -94,6 +95,7 @@ defmodule Sneex.Address.AbsoluteTest do
   defp assert_long_behavior(cpu, address) do
     mode = Absolute.new_long()
     assert %Absolute{type: :long} = mode
+    assert address == Mode.address(mode, cpu)
     assert BasicTypes.format_long(address) == Mode.disasm(mode, cpu)
   end
 end

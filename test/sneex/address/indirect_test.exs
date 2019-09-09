@@ -14,14 +14,14 @@ defmodule Sneex.Address.IndirectTest do
   test "new_*/2", %{cpu: cpu, static: static} do
     cpu = cpu |> Cpu.program_bank(0x42) |> Cpu.data_bank(0x24)
 
-    static |> Indirect.new_data(cpu) |> assert_behavior(cpu, 0x240004)
-    static |> Indirect.new_program(cpu) |> assert_behavior(cpu, 0x420004)
-    static |> Indirect.new_long(cpu) |> assert_behavior(cpu, 0x00004)
+    static |> Indirect.new_data() |> assert_behavior(cpu, 0x240004)
+    static |> Indirect.new_program() |> assert_behavior(cpu, 0x420004)
+    static |> Indirect.new_long() |> assert_behavior(cpu, 0x00004)
   end
 
   test "fetch/2 and store/3", %{cpu: cpu, static: static} do
     cpu = cpu |> Cpu.acc_size(:bit8)
-    mode = static |> Indirect.new_long(cpu)
+    mode = static |> Indirect.new_long()
 
     assert 0xAA == Mode.fetch(mode, cpu)
     cpu = mode |> Mode.store(cpu, 0xDE)
@@ -39,9 +39,8 @@ defmodule Sneex.Address.IndirectTest do
     assert_disasm(mode, cpu)
   end
 
-  defp assert_disasm(mode = %{is_long?: false}, cpu),
-    do: assert("($0001)" == Mode.disasm(mode, cpu))
-
-  defp assert_disasm(mode = %{is_long?: true}, cpu),
+  defp assert_disasm(mode = %{type: :long}, cpu),
     do: assert("[$0001]" == Mode.disasm(mode, cpu))
+
+  defp assert_disasm(mode, cpu), do: assert("($0001)" == Mode.disasm(mode, cpu))
 end
