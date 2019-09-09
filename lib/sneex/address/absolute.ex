@@ -20,6 +20,7 @@ defmodule Sneex.Address.Absolute do
   defimpl Sneex.Address.Mode do
     def address(%{type: t}, cpu), do: t |> calc_addr(cpu)
 
+    def byte_size(%{type: :long}, _cpu), do: 3
     def byte_size(_mode, _cpu), do: 2
 
     def fetch(mode, cpu) do

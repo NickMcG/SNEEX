@@ -30,14 +30,14 @@ defmodule Sneex.Ops.Decrement do
   end
 
   def new(0xCE, cpu) do
-    addr_mode = cpu |> Absolute.new(true)
+    addr_mode = true |> Absolute.new()
     bit_size = cpu |> Cpu.acc_size()
     mods = [CycleCalculator.constant(6), CycleCalculator.acc_is_16_bit(2)]
     %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
   end
 
   def new(0xC6, cpu) do
-    addr_mode = cpu |> DirectPage.new()
+    addr_mode = DirectPage.new()
     bit_size = cpu |> Cpu.acc_size()
 
     mods = [
@@ -50,14 +50,14 @@ defmodule Sneex.Ops.Decrement do
   end
 
   def new(0xDE, cpu) do
-    addr_mode = cpu |> Absolute.new(true) |> Indexed.new(cpu, :x)
+    addr_mode = true |> Absolute.new() |> Indexed.new(:x)
     bit_size = cpu |> Cpu.acc_size()
     mods = [CycleCalculator.constant(7), CycleCalculator.acc_is_16_bit(2)]
     %__MODULE__{bit_size: bit_size, cycle_mods: mods, address_mode: addr_mode}
   end
 
   def new(0xD6, cpu) do
-    addr_mode = cpu |> DirectPage.new() |> Indexed.new(cpu, :x)
+    addr_mode = DirectPage.new() |> Indexed.new(:x)
     bit_size = cpu |> Cpu.acc_size()
 
     mods = [
@@ -98,7 +98,7 @@ defmodule Sneex.Ops.Decrement do
   def new(_opcode, _cpu), do: nil
 
   defimpl Sneex.Ops.Opcode do
-    def byte_size(%{address_mode: mode}, _cpu), do: 1 + Mode.byte_size(mode)
+    def byte_size(%{address_mode: mode}, cpu), do: 1 + Mode.byte_size(mode, cpu)
 
     def total_cycles(%{cycle_mods: mods}, cpu) do
       cpu |> CycleCalculator.calc_cycles(mods)
