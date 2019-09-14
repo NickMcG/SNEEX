@@ -1,5 +1,5 @@
-defmodule Sneex.Ops.And do
-  @moduledoc "This module represents the AND operation."
+defmodule Sneex.Ops.ExclusiveOr do
+  @moduledoc "This module represents the EOR operation."
   defstruct [:cycle_mods, :address_mode, :preindex_mode, :index_reg]
 
   use Bitwise
@@ -24,21 +24,21 @@ defmodule Sneex.Ops.And do
           index_reg: nil | :x | :y
         }
 
-  @immediate 0x29
-  @absolute 0x2D
-  @absolute_long 0x2F
-  @direct_page 0x25
-  @direct_page_indirect 0x32
-  @direct_page_indirect_long 0x27
-  @absolute_indexed_x 0x3D
-  @absolute_long_indexed_x 0x3F
-  @absolute_indexed_y 0x39
-  @direct_page_indexed_x 0x35
-  @direct_page_indexed_x_indirect 0x21
-  @direct_page_indirect_indexed_y 0x31
-  @direct_page_indirect_long_indexed_y 0x37
-  @stack_relative 0x23
-  @stack_relative_indirect_indexed_y 0x33
+  @immediate 0x49
+  @absolute 0x4D
+  @absolute_long 0x4F
+  @direct_page 0x45
+  @direct_page_indirect 0x52
+  @direct_page_indirect_long 0x47
+  @absolute_indexed_x 0x5D
+  @absolute_long_indexed_x 0x5F
+  @absolute_indexed_y 0x59
+  @direct_page_indexed_x 0x55
+  @direct_page_indexed_x_indirect 0x41
+  @direct_page_indirect_indexed_y 0x51
+  @direct_page_indirect_long_indexed_y 0x57
+  @stack_relative 0x43
+  @stack_relative_indirect_indexed_y 0x53
 
   @spec new(Cpu.t() | byte()) :: nil | __MODULE__.t()
   def new(cpu = %Cpu{}) do
@@ -209,12 +209,12 @@ defmodule Sneex.Ops.And do
       acc_size = cpu |> Cpu.acc_size()
       data = mode |> Mode.fetch(cpu)
 
-      result = cpu |> Cpu.acc() |> band(data)
+      result = cpu |> Cpu.acc() |> bxor(data)
       %{negative: nf, zero: zf} = result |> CpuHelper.check_flags_for_value(acc_size)
 
       cpu |> Cpu.acc(result) |> Cpu.negative_flag(nf) |> Cpu.zero_flag(zf)
     end
 
-    def disasm(%{address_mode: mode}, cpu), do: "AND #{Mode.disasm(mode, cpu)}"
+    def disasm(%{address_mode: mode}, cpu), do: "EOR #{Mode.disasm(mode, cpu)}"
   end
 end

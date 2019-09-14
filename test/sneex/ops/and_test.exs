@@ -50,6 +50,18 @@ defmodule Sneex.Ops.AndTest do
     assert %And{address_mode: %Indexed{}} = And.new(0x35)
   end
 
+  test "new/1 - direct page, x-indexed, indirect addressing mode" do
+    assert %And{address_mode: %Indirect{}} = And.new(0x21)
+  end
+
+  test "new/1 - direct page indirect, y-indexed addressing mode" do
+    assert %And{address_mode: %Indexed{}} = And.new(0x31)
+  end
+
+  test "new/1 - direct page indirect long, x-indexed addressing mode" do
+    assert %And{address_mode: %Indexed{}} = And.new(0x37)
+  end
+
   test "new/1 - stack relative addressing mode" do
     assert %And{address_mode: %Stack{}} = And.new(0x23)
   end
