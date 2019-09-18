@@ -21,7 +21,7 @@ defmodule Sneex.CpuHelper do
   %{carry: false, negative: false, overflow: false, zero: false}
 
   iex> 0x7FFF |> Sneex.CpuHelper.check_flags_for_value(:bit16)
-  %{carry: false, negative: false, overflow: false, zero: false}
+  %{carry: false, negative: false, overflow: true, zero: false}
 
   iex> 0x8000 |> Sneex.CpuHelper.check_flags_for_value(:bit16)
   %{carry: false, negative: true, overflow: false, zero: false}
@@ -35,18 +35,20 @@ defmodule Sneex.CpuHelper do
   def check_flags_for_value(value, bitness) do
     %{
       negative: check_negative_flag(value, bitness),
-      overflow: check_overflow_flag(value),
+      overflow: check_overflow_flag(value, bitness),
       zero: check_zero_flag(value),
       carry: check_carry_flag(value)
     }
   end
 
-  defp check_negative_flag(value, :bit8) when value >= 0x80, do: true
-  defp check_negative_flag(value, :bit16) when value >= 0x8000, do: true
+  defp check_negative_flag(value, :bit8) when 0x80 == band(value, 0x80), do: true
+  defp check_negative_flag(value, :bit16) when 0x8000 == band(value, 0x8000), do: true
   defp check_negative_flag(_value, _bitness), do: false
 
   # Still need to figure this out
-  defp check_overflow_flag(_value), do: false
+  defp check_overflow_flag(value, :bit8) when 0x40 == band(value, 0x40), do: true
+  defp check_overflow_flag(value, :bit16) when 0x4000 == band(value, 0x4000), do: true
+  defp check_overflow_flag(_value, _bitness), do: false
 
   defp check_zero_flag(0), do: true
   defp check_zero_flag(_), do: false
